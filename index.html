@@ -136,7 +136,7 @@
            <div id="next-level-info" class="my-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
                <p class="text-indigo-600 text-xs font-bold uppercase tracking-wide mb-1">Mot de passe niveau suivant :</p>
                <div id="success-code-display" class="text-3xl font-mono font-black text-indigo-900 tracking-widest bg-white inline-block px-4 py-2 rounded-lg border-2 border-dashed border-indigo-300 select-all">
-                   A02
+                   ...
                </div>
                <p class="text-slate-400 text-[10px] mt-2">Note ce code pour revenir directement ici !</p>
            </div>
@@ -156,9 +156,9 @@
             <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center justify-center gap-2">
                 <i data-lucide="key" class="w-5 h-5 text-indigo-500"></i> Accès Niveau
             </h3>
-            <p class="text-sm text-slate-500 mb-4">Entre ton code (ex: A05)</p>
+            <p class="text-sm text-slate-500 mb-4">Entre ton code (ex: X92)</p>
             
-            <input type="text" id="code-input" maxlength="3" class="w-full text-center text-3xl font-mono font-bold border-2 border-slate-300 rounded-lg py-3 mb-4 uppercase focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100 placeholder-slate-200" placeholder="A01">
+            <input type="text" id="code-input" maxlength="3" class="w-full text-center text-3xl font-mono font-bold border-2 border-slate-300 rounded-lg py-3 mb-4 uppercase focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100 placeholder-slate-200" placeholder="???">
             
             <div id="code-error" class="text-red-500 text-xs font-bold mb-3 hidden">Code invalide !</div>
 
@@ -175,23 +175,23 @@
         const GRID_OFFSET = GRID_CELL / 2;
         
         // --- Niveaux (15 Fixes) ---
-        // Codes: A01 -> O15
+        // Codes aléatoires fixes pour éviter les devinettes
         const PREDEFINED_LEVELS = [
-            { id: 1, code: "A01", start: [1, 4, 90], target: [4, 4], obstacles: [], hint: "Va tout droit !" },
-            { id: 2, code: "B02", start: [1, 4, 90], target: [6, 4], obstacles: [], hint: "Un peu plus loin..." },
-            { id: 3, code: "C03", start: [2, 6, 0], target: [2, 2], obstacles: [], hint: "Attention au sens." },
-            { id: 4, code: "D04", start: [1, 6, 90], target: [1, 3], obstacles: [], hint: "Utilise 'Tourner Gauche'." },
-            { id: 5, code: "E05", start: [1, 1, 90], target: [4, 4], obstacles: [], hint: "L'escalier." },
-            { id: 6, code: "F06", start: [1, 3, 90], target: [5, 3], obstacles: [[3, 3]], hint: "Contourne le rocher !" },
-            { id: 7, code: "G07", start: [1, 1, 90], target: [1, 6], obstacles: [[1, 3], [1, 4]], hint: "Chemin bloqué." },
-            { id: 8, code: "H08", start: [3, 6, 0], target: [3, 2], obstacles: [[3, 4]], hint: "Petit détour." },
-            { id: 9, code: "I09", start: [1, 1, 90], target: [6, 6], obstacles: [[2, 2], [3, 3], [4, 4], [5, 5]], hint: "Diagonale bloquée." },
-            { id: 10, code: "J10", start: [1, 4, 90], target: [6, 4], obstacles: [[3, 3], [3, 4], [3, 5]], hint: "Le mur." },
-            { id: 11, code: "K11", start: [1, 1, 90], target: [6, 1], obstacles: [[2, 1], [3, 1], [4, 1], [5, 1], [3, 2], [3, 0]], hint: "Labyrinthe 1." },
-            { id: 12, code: "L12", start: [3, 3, 0], target: [3, 4], obstacles: [[3, 2], [2, 3], [4, 3], [2, 4], [4, 4], [3, 5]], hint: "Prison." },
-            { id: 13, code: "M13", start: [0, 7, 90], target: [7, 0], obstacles: [[1, 6], [2, 5], [3, 4], [4, 3], [5, 2], [6, 1]], hint: "Passage étroit." },
-            { id: 14, code: "N14", start: [1, 4, 90], target: [6, 4], obstacles: [[2, 4], [4, 4], [2, 3], [4, 5], [3, 1], [3, 7]], hint: "Zig-zag." },
-            { id: 15, code: "O15", start: [0, 0, 90], target: [7, 7], obstacles: [[1, 0], [0, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 6], [6, 7], [1, 2], [2, 1]], hint: "Défi final !" }
+            { id: 1, code: "D7X", start: [1, 4, 90], target: [4, 4], obstacles: [], hint: "Va tout droit !" },
+            { id: 2, code: "K3M", start: [1, 4, 90], target: [6, 4], obstacles: [], hint: "Un peu plus loin..." },
+            { id: 3, code: "P92", start: [2, 6, 0], target: [2, 2], obstacles: [], hint: "Attention au sens." },
+            { id: 4, code: "Z5R", start: [1, 6, 90], target: [1, 3], obstacles: [], hint: "Utilise 'Tourner Gauche'." },
+            { id: 5, code: "B8L", start: [1, 1, 90], target: [4, 4], obstacles: [], hint: "L'escalier." },
+            { id: 6, code: "M4Q", start: [1, 3, 90], target: [5, 3], obstacles: [[3, 3]], hint: "Contourne le rocher !" },
+            { id: 7, code: "J2W", start: [1, 1, 90], target: [1, 6], obstacles: [[1, 3], [1, 4]], hint: "Chemin bloqué." },
+            { id: 8, code: "X9V", start: [3, 6, 0], target: [3, 2], obstacles: [[3, 4]], hint: "Petit détour." },
+            { id: 9, code: "N6T", start: [1, 1, 90], target: [6, 6], obstacles: [[2, 2], [3, 3], [4, 4], [5, 5]], hint: "Diagonale bloquée." },
+            { id: 10, code: "R3C", start: [1, 4, 90], target: [6, 4], obstacles: [[3, 3], [3, 4], [3, 5]], hint: "Le mur." },
+            { id: 11, code: "Y8F", start: [1, 1, 90], target: [6, 1], obstacles: [[2, 1], [3, 1], [4, 1], [5, 1], [3, 2], [3, 0]], hint: "Labyrinthe 1." },
+            { id: 12, code: "G5H", start: [3, 3, 0], target: [3, 4], obstacles: [[3, 2], [2, 3], [4, 3], [2, 4], [4, 4], [3, 5]], hint: "Prison." },
+            { id: 13, code: "V2K", start: [0, 7, 90], target: [7, 0], obstacles: [[1, 6], [2, 5], [3, 4], [4, 3], [5, 2], [6, 1]], hint: "Passage étroit." },
+            { id: 14, code: "Q7P", start: [1, 4, 90], target: [6, 4], obstacles: [[2, 4], [4, 4], [2, 3], [4, 5], [3, 1], [3, 7]], hint: "Zig-zag." },
+            { id: 15, code: "W4X", start: [0, 0, 90], target: [7, 7], obstacles: [[1, 0], [0, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 6], [6, 7], [1, 2], [2, 1]], hint: "Défi final !" }
         ];
 
         const BLOCK_TYPES = {
