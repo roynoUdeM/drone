@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Drone Academy - 15 Niveaux</title>
+    <title>Drone Academy - Expert</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @keyframes bounce-in { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .animate-bounce-in { animation: bounce-in 0.3s ease-out forwards; }
+        .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        /* Empêcher le zoom double-tap sur tablette */
         button { touch-action: manipulation; }
     </style>
 </head>
@@ -23,15 +24,19 @@
             <div class="bg-white p-2 rounded-full text-indigo-600 shadow-sm">
                 <i data-lucide="rocket" class="w-5 h-5 md:w-6 md:h-6"></i>
             </div>
-            <h1 class="text-lg md:text-2xl font-bold tracking-tight">Drone Academy</h1>
+            <h1 class="text-lg md:text-2xl font-bold tracking-tight hidden sm:block">Drone Academy</h1>
+            <h1 class="text-lg font-bold tracking-tight sm:hidden">Drone Acad.</h1>
         </div>
+        
         <div class="flex items-center gap-2 md:gap-4">
-            <div class="bg-indigo-800 px-3 py-1 rounded text-xs font-mono opacity-90 border border-indigo-500">
-                NIVEAU <span id="level-indicator" class="text-white font-bold text-lg">1</span>/15
-            </div>
-            <div id="mission-badge" class="hidden sm:flex items-center gap-3 px-4 py-2 rounded-lg transition-colors bg-indigo-800 text-indigo-100">
-                <i data-lucide="trophy" id="trophy-icon" class="w-5 h-5 opacity-70"></i>
-                <span id="mission-text" class="font-bold text-sm md:text-base">Objectif : L'étoile</span>
+            <!-- Bouton Code -->
+            <button onclick="openCodeModal()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1 border border-indigo-400 transition-colors">
+                <i data-lucide="key" class="w-3 h-3"></i> CODE
+            </button>
+
+            <div class="bg-indigo-800 px-3 py-1 rounded text-xs font-mono opacity-90 border border-indigo-500 flex flex-col items-center leading-tight">
+                <span class="text-[10px] text-indigo-300">NIVEAU</span>
+                <span id="level-indicator" class="text-white font-bold text-lg">1</span>
             </div>
         </div>
     </header>
@@ -44,8 +49,8 @@
             <div id="desktop-tools" class="space-y-3"></div>
             <div class="mt-8 p-4 bg-white/50 rounded-xl border border-white text-sm text-slate-600">
                 <p class="font-bold mb-1 text-indigo-600">💡 Astuce :</p>
-                Évite les obstacles gris.<br>
-                N'oublie pas de <span class="font-bold text-green-600">Décoller</span> !
+                Le code du niveau s'affiche quand tu gagnes.<br>
+                Note-le pour revenir plus tard !
             </div>
         </div>
 
@@ -89,9 +94,14 @@
                     </button>
                 </div>
 
+                <!-- Code Actuel (Petit badge discret) -->
+                <div id="current-code-badge" class="absolute top-3 right-3 z-10 bg-slate-800 text-white px-2 py-1 rounded text-[10px] font-mono opacity-50">
+                    CODE: ???
+                </div>
+
                 <canvas id="simCanvas" width="400" height="400" class="rounded-lg border bg-slate-50 shadow-inner w-full h-auto object-contain max-h-full"></canvas>
                 
-                <div id="message-container" class="absolute bottom-4 left-4 right-4 text-center transition-all duration-300 transform translate-y-4 opacity-0">
+                <div id="message-container" class="absolute bottom-4 left-4 right-4 text-center transition-all duration-300 transform translate-y-4 opacity-0 z-20">
                     <div id="message-box" class="inline-block px-4 py-2 rounded-xl text-sm font-bold shadow-lg border-2 bg-white border-blue-100 text-blue-600">
                         Bienvenue !
                     </div>
@@ -120,25 +130,41 @@
            <div class="inline-flex p-5 bg-yellow-100 rounded-full mb-4 text-yellow-500 shadow-inner ring-4 ring-yellow-50">
                <i data-lucide="trophy" class="w-12 h-12"></i>
            </div>
-           <h2 class="text-3xl font-bold text-slate-800 mb-2">Niveau Réussi !</h2>
-           <p class="text-slate-500 mb-8 font-medium">Excellent travail pilote.</p>
-           <button onclick="nextLevel()" class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:bg-indigo-700 hover:scale-105 transition-all w-full border-b-4 border-indigo-800">
-             Niveau Suivant
+           <h2 class="text-3xl font-bold text-slate-800 mb-1">Niveau Réussi !</h2>
+           
+           <!-- Next Level Code Display -->
+           <div id="next-level-info" class="my-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+               <p class="text-indigo-600 text-xs font-bold uppercase tracking-wide mb-1">Mot de passe niveau suivant :</p>
+               <div id="success-code-display" class="text-3xl font-mono font-black text-indigo-900 tracking-widest bg-white inline-block px-4 py-2 rounded-lg border-2 border-dashed border-indigo-300 select-all">
+                   A02
+               </div>
+               <p class="text-slate-400 text-[10px] mt-2">Note ce code pour revenir directement ici !</p>
+           </div>
+
+           <button onclick="nextLevel()" class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:bg-indigo-700 hover:scale-105 transition-all w-full border-b-4 border-indigo-800 flex items-center justify-center gap-2">
+             Niveau Suivant <i data-lucide="arrow-right" class="w-5 h-5"></i>
            </button>
         </div>
     </div>
 
-    <!-- Modal Game Over (Victory) -->
-    <div id="modal-victory" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-md p-4">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center border-4 border-purple-500 relative overflow-hidden animate-bounce-in">
-           <div class="inline-flex p-6 bg-purple-100 rounded-full mb-6 text-purple-600 shadow-inner ring-4 ring-purple-50">
-               <i data-lucide="crown" class="w-16 h-16 animate-pulse"></i>
-           </div>
-           <h2 class="text-4xl font-bold text-purple-900 mb-4">CHAMPION !</h2>
-           <p class="text-slate-600 mb-8 text-lg">Tu as maîtrisé les 15 niveaux. Tu es prêt pour le pilotage réel !</p>
-           <button onclick="location.reload()" class="bg-purple-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:bg-purple-700 hover:scale-105 transition-all w-full border-b-4 border-purple-800">
-             Recommencer l'aventure
-           </button>
+    <!-- Modal Enter Code -->
+    <div id="modal-code" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-xs w-full text-center relative animate-bounce-in">
+            <button onclick="document.getElementById('modal-code').classList.add('hidden')" class="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-2">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h3 class="text-xl font-bold text-slate-800 mb-4 flex items-center justify-center gap-2">
+                <i data-lucide="key" class="w-5 h-5 text-indigo-500"></i> Accès Niveau
+            </h3>
+            <p class="text-sm text-slate-500 mb-4">Entre ton code (ex: A05)</p>
+            
+            <input type="text" id="code-input" maxlength="3" class="w-full text-center text-3xl font-mono font-bold border-2 border-slate-300 rounded-lg py-3 mb-4 uppercase focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100 placeholder-slate-200" placeholder="A01">
+            
+            <div id="code-error" class="text-red-500 text-xs font-bold mb-3 hidden">Code invalide !</div>
+
+            <button onclick="submitCode()" class="bg-green-500 text-white px-4 py-3 rounded-xl font-bold shadow-lg hover:bg-green-600 w-full border-b-4 border-green-700">
+                Charger le niveau
+            </button>
         </div>
     </div>
 
@@ -146,31 +172,26 @@
         // --- Configuration ---
         const CANVAS_SIZE = 400;
         const GRID_CELL = 50;
-        const GRID_OFFSET = GRID_CELL / 2; // Pour centrer (25px)
+        const GRID_OFFSET = GRID_CELL / 2;
         
-        // --- Les 15 Niveaux ---
-        // obstacles: Array of [gridX, gridY]
-        const LEVELS = [
-            // PHASE 1 : BASES (1-5)
-            { id: 1, start: [1, 4, 90], target: [4, 4], obstacles: [], hint: "Va tout droit !" },
-            { id: 2, start: [1, 4, 90], target: [6, 4], obstacles: [], hint: "Un peu plus loin..." },
-            { id: 3, start: [2, 6, 0], target: [2, 2], obstacles: [], hint: "Attention au sens du drone." },
-            { id: 4, start: [1, 6, 90], target: [1, 3], obstacles: [], hint: "Utilise 'Tourner Gauche'." },
-            { id: 5, start: [1, 1, 90], target: [4, 4], obstacles: [], hint: "L'escalier (Avancer, Tourner, Avancer...)" },
-            
-            // PHASE 2 : OBSTACLES SIMPLES (6-10)
-            { id: 6, start: [1, 3, 90], target: [5, 3], obstacles: [[3, 3]], hint: "Contourne le rocher !" },
-            { id: 7, start: [1, 1, 90], target: [1, 6], obstacles: [[1, 3], [1, 4]], hint: "Le chemin direct est bloqué." },
-            { id: 8, start: [3, 6, 0], target: [3, 2], obstacles: [[3, 4]], hint: "Fais un petit détour." },
-            { id: 9, start: [1, 1, 90], target: [6, 6], obstacles: [[2, 2], [3, 3], [4, 4], [5, 5]], hint: "Ne fonce pas dans la diagonale !" },
-            { id: 10, start: [1, 4, 90], target: [6, 4], obstacles: [[3, 3], [3, 4], [3, 5]], hint: "Un mur te barre la route." },
-
-            // PHASE 3 : EXPERT (11-15)
-            { id: 11, start: [1, 1, 90], target: [6, 1], obstacles: [[2, 1], [3, 1], [4, 1], [5, 1], [3, 2], [3, 0]], hint: "Quel labyrinthe !" },
-            { id: 12, start: [3, 3, 0], target: [3, 4], obstacles: [[3, 2], [2, 3], [4, 3], [2, 4], [4, 4], [3, 5]], hint: "Tu es encerclé, il faut sortir." },
-            { id: 13, start: [0, 7, 90], target: [7, 0], obstacles: [[1, 6], [2, 5], [3, 4], [4, 3], [5, 2], [6, 1]], hint: "Le passage est étroit." },
-            { id: 14, start: [1, 4, 90], target: [6, 4], obstacles: [[2, 4], [4, 4], [2, 3], [4, 5], [3, 1], [3, 7]], hint: "Zig-zag obligatoire." },
-            { id: 15, start: [0, 0, 90], target: [7, 7], obstacles: [[1, 0], [0, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 6], [6, 7], [1, 2], [2, 1]], hint: "Le défi final. Bonne chance !" }
+        // --- Niveaux (15 Fixes) ---
+        // Codes: A01 -> O15
+        const PREDEFINED_LEVELS = [
+            { id: 1, code: "A01", start: [1, 4, 90], target: [4, 4], obstacles: [], hint: "Va tout droit !" },
+            { id: 2, code: "B02", start: [1, 4, 90], target: [6, 4], obstacles: [], hint: "Un peu plus loin..." },
+            { id: 3, code: "C03", start: [2, 6, 0], target: [2, 2], obstacles: [], hint: "Attention au sens." },
+            { id: 4, code: "D04", start: [1, 6, 90], target: [1, 3], obstacles: [], hint: "Utilise 'Tourner Gauche'." },
+            { id: 5, code: "E05", start: [1, 1, 90], target: [4, 4], obstacles: [], hint: "L'escalier." },
+            { id: 6, code: "F06", start: [1, 3, 90], target: [5, 3], obstacles: [[3, 3]], hint: "Contourne le rocher !" },
+            { id: 7, code: "G07", start: [1, 1, 90], target: [1, 6], obstacles: [[1, 3], [1, 4]], hint: "Chemin bloqué." },
+            { id: 8, code: "H08", start: [3, 6, 0], target: [3, 2], obstacles: [[3, 4]], hint: "Petit détour." },
+            { id: 9, code: "I09", start: [1, 1, 90], target: [6, 6], obstacles: [[2, 2], [3, 3], [4, 4], [5, 5]], hint: "Diagonale bloquée." },
+            { id: 10, code: "J10", start: [1, 4, 90], target: [6, 4], obstacles: [[3, 3], [3, 4], [3, 5]], hint: "Le mur." },
+            { id: 11, code: "K11", start: [1, 1, 90], target: [6, 1], obstacles: [[2, 1], [3, 1], [4, 1], [5, 1], [3, 2], [3, 0]], hint: "Labyrinthe 1." },
+            { id: 12, code: "L12", start: [3, 3, 0], target: [3, 4], obstacles: [[3, 2], [2, 3], [4, 3], [2, 4], [4, 4], [3, 5]], hint: "Prison." },
+            { id: 13, code: "M13", start: [0, 7, 90], target: [7, 0], obstacles: [[1, 6], [2, 5], [3, 4], [4, 3], [5, 2], [6, 1]], hint: "Passage étroit." },
+            { id: 14, code: "N14", start: [1, 4, 90], target: [6, 4], obstacles: [[2, 4], [4, 4], [2, 3], [4, 5], [3, 1], [3, 7]], hint: "Zig-zag." },
+            { id: 15, code: "O15", start: [0, 0, 90], target: [7, 7], obstacles: [[1, 0], [0, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 6], [6, 7], [1, 2], [2, 1]], hint: "Défi final !" }
         ];
 
         const BLOCK_TYPES = {
@@ -189,7 +210,8 @@
 
         // --- État Global ---
         let state = {
-            levelIndex: 0,
+            currentLevel: null, // Objet niveau
+            levelNumber: 1,     // Numéro affiché
             program: [],
             isPlaying: false,
             activeBlockIndex: -1,
@@ -198,12 +220,12 @@
             drone: { x: 0, y: 0, rotation: 0, isFlying: false, altitude: 0 },
             path: [],
             target: { x: 0, y: 0 },
-            obstacles: []
+            obstacles: [] // Array of {gx, gy, x, y}
         };
 
         window.onload = () => {
             initTools();
-            loadLevel(0);
+            loadLevel(1); // Charge niveau 1
             loop(); 
         };
 
@@ -227,61 +249,152 @@
             lucide.createIcons();
         }
 
-        // --- Gestion des Niveaux ---
-        function loadLevel(idx) {
-            if(idx >= LEVELS.length) {
-                document.getElementById('modal-victory').classList.remove('hidden');
-                return;
-            }
-            state.levelIndex = idx;
-            const lvl = LEVELS[idx];
+        // --- Système de Niveaux & Codes ---
+
+        function openCodeModal() {
+            document.getElementById('modal-code').classList.remove('hidden');
+            document.getElementById('code-input').value = '';
+            document.getElementById('code-error').classList.add('hidden');
+            document.getElementById('code-input').focus();
+        }
+
+        function submitCode() {
+            const input = document.getElementById('code-input').value.toUpperCase().trim();
+            const level = PREDEFINED_LEVELS.find(l => l.code === input);
             
-            const sx = lvl.start[0] * GRID_CELL + GRID_OFFSET;
-            const sy = lvl.start[1] * GRID_CELL + GRID_OFFSET;
-            const tx = lvl.target[0] * GRID_CELL + GRID_OFFSET;
-            const ty = lvl.target[1] * GRID_CELL + GRID_OFFSET;
+            if (level) {
+                loadLevel(level.id);
+                document.getElementById('modal-code').classList.add('hidden');
+            } else {
+                document.getElementById('code-error').classList.remove('hidden');
+            }
+        }
 
-            // Conversion obstacles grille -> pixels (pour affichage et collision)
-            // On stocke les indices de grille pour collision simple
-            state.obstacles = lvl.obstacles.map(o => ({ gx: o[0], gy: o[1], x: o[0]*GRID_CELL+GRID_OFFSET, y: o[1]*GRID_CELL+GRID_OFFSET }));
+        function loadLevel(num) {
+            state.levelNumber = num;
+            let lvlData;
 
-            state.drone = { x: sx, y: sy, rotation: lvl.start[2], isFlying: false, altitude: 0 };
+            if (num <= 15) {
+                lvlData = PREDEFINED_LEVELS.find(l => l.id === num);
+            } else {
+                lvlData = generateRandomLevel(num);
+            }
+
+            state.currentLevel = lvlData;
+            
+            // Setup Physique
+            const sx = lvlData.start[0] * GRID_CELL + GRID_OFFSET;
+            const sy = lvlData.start[1] * GRID_CELL + GRID_OFFSET;
+            const tx = lvlData.target[0] * GRID_CELL + GRID_OFFSET;
+            const ty = lvlData.target[1] * GRID_CELL + GRID_OFFSET;
+
+            state.obstacles = lvlData.obstacles.map(o => ({ gx: o[0], gy: o[1], x: o[0]*GRID_CELL+GRID_OFFSET, y: o[1]*GRID_CELL+GRID_OFFSET }));
+            state.drone = { x: sx, y: sy, rotation: lvlData.start[2], isFlying: false, altitude: 0 };
             state.target = { x: tx, y: ty };
             state.path = [{ x: sx, y: sy }];
             state.activeBlockIndex = -1;
             state.isPlaying = false;
             state.missionComplete = false;
-            state.viewMode = 'TOP';
+            state.program = []; // Reset programme au changement de niveau
 
-            document.getElementById('level-indicator').innerText = idx + 1;
+            // UI Updates
+            document.getElementById('level-indicator').innerText = num > 15 ? "∞" : num;
             document.getElementById('modal-success').classList.add('hidden');
+            document.getElementById('current-code-badge').innerText = `CODE: ${lvlData.code || "AUTO"}`;
             
             updateUI();
             updateProgramUI();
             setViewMode('TOP');
-            showMessage(`Niveau ${idx+1}: ${lvl.hint}`, 'info');
-        }
-
-        function resetSimulation() {
-            const lvl = LEVELS[state.levelIndex];
-            const sx = lvl.start[0] * GRID_CELL + GRID_OFFSET;
-            const sy = lvl.start[1] * GRID_CELL + GRID_OFFSET;
             
-            state.drone = { x: sx, y: sy, rotation: lvl.start[2], isFlying: false, altitude: 0 };
-            state.path = [{ x: sx, y: sy }];
-            state.activeBlockIndex = -1;
-            state.isPlaying = false;
-            state.missionComplete = false;
-            setViewMode('TOP');
-            updateUI();
-            updateProgramUI();
+            const txt = num > 15 ? "Mode Aléatoire !" : `Niveau ${num}`;
+            showMessage(`${txt} - ${lvlData.hint}`, 'info');
         }
 
         function nextLevel() {
-            state.program = []; 
-            loadLevel(state.levelIndex + 1);
+            loadLevel(state.levelNumber + 1);
         }
 
+        // --- Générateur de Niveaux Aléatoires ---
+        
+        function generateRandomLevel(num) {
+            // Grille 0-7 (8x8)
+            const MAX = 8;
+            let start, target, obstacles;
+            let isValid = false;
+            let attempts = 0;
+
+            while (!isValid && attempts < 100) {
+                attempts++;
+                obstacles = [];
+                
+                // 1. Start Pos
+                start = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX), Math.floor(Math.random()*4)*90];
+                
+                // 2. Target Pos (Distance min 3 cases)
+                do {
+                    target = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX)];
+                } while (Math.abs(target[0]-start[0]) + Math.abs(target[1]-start[1]) < 3);
+
+                // 3. Obstacles (5 à 12 blocs)
+                const obsCount = 5 + Math.floor(Math.random() * 8);
+                for(let i=0; i<obsCount; i++) {
+                    const ox = Math.floor(Math.random()*MAX);
+                    const oy = Math.floor(Math.random()*MAX);
+                    // Pas sur start, pas sur target, pas doublon
+                    if ((ox !== start[0] || oy !== start[1]) && 
+                        (ox !== target[0] || oy !== target[1]) &&
+                        !obstacles.some(o => o[0]===ox && o[1]===oy)) {
+                        obstacles.push([ox, oy]);
+                    }
+                }
+
+                // 4. Validation Pathfinding (BFS simple)
+                if (checkPathExists(start, target, obstacles, MAX)) {
+                    isValid = true;
+                }
+            }
+
+            return {
+                id: num,
+                code: "RND", // Pas de code de sauvegarde pour l'aléatoire
+                start: start,
+                target: target,
+                obstacles: obstacles,
+                hint: "Trouve le chemin !"
+            };
+        }
+
+        function checkPathExists(start, target, obstacles, size) {
+            const q = [[start[0], start[1]]];
+            const visited = new Set();
+            visited.add(`${start[0]},${start[1]}`);
+            
+            const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
+
+            while(q.length > 0) {
+                const [cx, cy] = q.shift();
+                if(cx === target[0] && cy === target[1]) return true;
+
+                for(let d of dirs) {
+                    const nx = cx + d[0];
+                    const ny = cy + d[1];
+                    // Bounds
+                    if(nx >= 0 && nx < size && ny >= 0 && ny < size) {
+                        // Collision
+                        if(!obstacles.some(o => o[0]===nx && o[1]===ny)) {
+                            if(!visited.has(`${nx},${ny}`)) {
+                                visited.add(`${nx},${ny}`);
+                                q.push([nx, ny]);
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // --- Logique Programme ---
+        
         function addBlock(typeId) {
             if (state.isPlaying) return;
             state.program.push({ type: typeId, id: Date.now() + Math.random() });
@@ -343,10 +456,8 @@
 
                     const nextDrone = blockType.action(currentDrone);
                     
-                    // --- COLLISION DETECTION ---
-                    // 1. Check Bounds
+                    // Collision Bounds
                     if (nextDrone.x < 0 || nextDrone.x > CANVAS_SIZE || nextDrone.y < 0 || nextDrone.y > CANVAS_SIZE) {
-                         // Animate crash to the edge
                          await animateDrone(currentDrone, nextDrone);
                          showMessage("Alerte ! Tu sors de la zone !", 'error');
                          state.isPlaying = false;
@@ -354,15 +465,13 @@
                          return;
                     }
 
-                    // 2. Check Obstacles
-                    // Convert pixel pos back to grid index approx to check collision
+                    // Collision Obstacles
                     const ngx = Math.floor(nextDrone.x / GRID_CELL);
                     const ngy = Math.floor(nextDrone.y / GRID_CELL);
-                    
                     const hitObstacle = state.obstacles.find(o => o.gx === ngx && o.gy === ngy);
                     if (hitObstacle) {
-                         await animateDrone(currentDrone, nextDrone); // Move to the crash site
-                         state.drone = nextDrone; // Update state to show crash position
+                         await animateDrone(currentDrone, nextDrone); 
+                         state.drone = nextDrone; 
                          showMessage("BOUM ! Attention au rocher !", 'error');
                          state.isPlaying = false;
                          updateUI();
@@ -423,6 +532,23 @@
                     state.missionComplete = true;
                     showMessage("BRAVO !", 'success');
                     updateUI();
+                    
+                    // Show next level code logic
+                    const nextLvlNum = state.levelNumber + 1;
+                    const nextLvl = PREDEFINED_LEVELS.find(l => l.id === nextLvlNum);
+                    
+                    const display = document.getElementById('success-code-display');
+                    const infoBox = document.getElementById('next-level-info');
+                    
+                    if (nextLvl) {
+                        display.innerText = nextLvl.code;
+                        infoBox.classList.remove('hidden');
+                    } else {
+                        // Mode infini
+                        display.innerText = "∞";
+                        infoBox.querySelector('p').innerText = "Mode Infini activé !";
+                    }
+
                     setTimeout(() => document.getElementById('modal-success').classList.remove('hidden'), 800);
                 } else {
                     showMessage("Atterris pour valider !", 'warning');
@@ -443,18 +569,6 @@
                 btnRun.className = "py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-95 border-b-4 bg-green-500 border-green-700 hover:bg-green-600 hover:shadow-green-500/30";
                 btnRun.disabled = false;
                 btnText.innerText = "LANCER";
-            }
-            
-            const badge = document.getElementById('mission-badge');
-            const trophy = document.getElementById('trophy-icon');
-            if (state.missionComplete) {
-                badge.classList.remove('bg-indigo-800', 'text-indigo-100');
-                badge.classList.add('bg-yellow-400', 'text-yellow-900');
-                trophy.classList.add('animate-bounce');
-            } else {
-                badge.classList.add('bg-indigo-800', 'text-indigo-100');
-                badge.classList.remove('bg-yellow-400', 'text-yellow-900');
-                trophy.classList.remove('animate-bounce');
             }
         }
 
@@ -516,19 +630,14 @@
             requestAnimationFrame(loop);
         }
 
-        // Helper pour dessiner le drone
         function drawDrone2D(ctx, x, y, rot, alt) {
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate((rot * Math.PI)/180);
             const scale = 1 + (alt / 400); 
             ctx.scale(scale, scale);
-
             ctx.fillStyle = '#2563eb';
-            ctx.beginPath();
-            ctx.roundRect(-15, -15, 30, 30, 8);
-            ctx.fill();
-
+            ctx.beginPath(); ctx.roundRect(-15, -15, 30, 30, 8); ctx.fill();
             ctx.fillStyle = '#bfdbfe';
             [[-15,-15],[15,-15],[15,15],[-15,15]].forEach(([dx,dy], idx) => {
                 ctx.beginPath();
@@ -536,42 +645,32 @@
                 ctx.arc(dx, dy, r, 0, Math.PI*2); ctx.fill();
                 ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 1; ctx.stroke();
             });
-
             ctx.fillStyle = 'white';
             ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(-5,-2); ctx.lineTo(5,-2); ctx.fill();
             ctx.restore();
         }
 
         function drawTop(ctx) {
-            // Fond
             ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
             for(let i=0; i<=CANVAS_SIZE; i+=GRID_CELL) {
                 ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,CANVAS_SIZE); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(CANVAS_SIZE,i); ctx.stroke();
             }
             
-            // OBSTACLES (VUE DE DESSUS)
-            ctx.fillStyle = '#94a3b8'; // Slate 400
+            ctx.fillStyle = '#94a3b8'; 
             state.obstacles.forEach(o => {
-                ctx.beginPath();
-                ctx.roundRect(o.x - 20, o.y - 20, 40, 40, 4);
-                ctx.fill();
-                // Détail rocher
-                ctx.fillStyle = '#64748b';
-                ctx.beginPath(); ctx.arc(o.x-5, o.y-5, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.roundRect(o.x - 20, o.y - 20, 40, 40, 4); ctx.fill();
+                ctx.fillStyle = '#64748b'; ctx.beginPath(); ctx.arc(o.x-5, o.y-5, 5, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = '#94a3b8';
             });
 
-            // Cible
-            ctx.save();
-            ctx.translate(state.target.x, state.target.y);
+            ctx.save(); ctx.translate(state.target.x, state.target.y);
             ctx.fillStyle = '#fbbf24'; ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 10;
             ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
             ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(0,0,18 + Math.sin(Date.now()/200)*2, 0, Math.PI*2); ctx.stroke();
             ctx.restore();
 
-            // Trace
             if(state.path.length > 1) {
                 ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 3; ctx.setLineDash([5,5]);
                 ctx.beginPath(); ctx.moveTo(state.path[0].x, state.path[0].y);
@@ -579,38 +678,24 @@
                 ctx.lineTo(state.drone.x, state.drone.y); ctx.stroke(); ctx.setLineDash([]);
             }
 
-            // Ombre Drone
             ctx.save(); 
             ctx.translate(state.drone.x, state.drone.y);
             ctx.rotate((state.drone.rotation * Math.PI)/180);
             const shadowScale = Math.max(0.5, 1 - (state.drone.altitude/200));
-            ctx.scale(shadowScale, shadowScale); 
-            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.scale(shadowScale, shadowScale); ctx.fillStyle = 'rgba(0,0,0,0.1)';
             ctx.beginPath(); ctx.roundRect(-15, -15, 30, 30, 8); ctx.fill();
             ctx.restore();
 
-            // Drone
             const viewY = state.drone.y - (state.drone.altitude * 0.5);
             drawDrone2D(ctx, state.drone.x, viewY, state.drone.rotation, state.drone.altitude);
         }
 
-        // --- VUE ISOMETRIQUE ---
         function drawIso(ctx) {
-            const originX = 200; 
-            const originY = 50;  
-            const isoW = 0.8;    
-            const isoH = 0.4;    
+            const originX = 200; const originY = 50;  
+            const isoW = 0.8; const isoH = 0.4;    
+            const toIso = (x, y, z) => ({ x: (x - y) * isoW + originX, y: (x + y) * isoH + originY - z });
 
-            const toIso = (x, y, z) => {
-                return {
-                    x: (x - y) * isoW + originX,
-                    y: (x + y) * isoH + originY - z
-                };
-            };
-
-            // Sol
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1; ctx.strokeStyle = '#cbd5e1';
             for(let x=0; x<=CANVAS_SIZE; x+=GRID_CELL) {
                 const p1 = toIso(x, 0, 0); const p2 = toIso(x, CANVAS_SIZE, 0);
                 ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
@@ -620,42 +705,21 @@
                 ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
             }
 
-            // OBSTACLES (VUE ISO - CUBES)
-            // On trie les objets par profondeur (y approximatif) pour le painter's algorithm si besoin
-            // Ici simple : on dessine tout le sol/obstacles avant le drone.
             state.obstacles.forEach(o => {
-                const z = 0; const h = 25; // Hauteur obstacle
-                const base = toIso(o.x, o.y, 0);
-                const top = toIso(o.x, o.y, h);
-                
-                // Ombre au sol
-                ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                ctx.beginPath(); ctx.ellipse(base.x, base.y, 15, 8, 0, 0, Math.PI*2); ctx.fill();
-
-                // Corps (Cube simplifié - juste le top et face)
-                ctx.fillStyle = '#64748b'; // Top color
-                ctx.beginPath();
-                // Face approximative pour effet 3D simple
-                ctx.moveTo(base.x-10, base.y); ctx.lineTo(base.x+10, base.y);
-                ctx.lineTo(top.x+10, top.y); ctx.lineTo(top.x-10, top.y);
-                ctx.fill();
-                
-                // Top
-                ctx.fillStyle = '#94a3b8';
-                ctx.beginPath(); ctx.ellipse(top.x, top.y, 12, 6, 0, 0, Math.PI*2); ctx.fill();
+                const z = 0; const h = 25;
+                const base = toIso(o.x, o.y, 0); const top = toIso(o.x, o.y, h);
+                ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.ellipse(base.x, base.y, 15, 8, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#64748b'; ctx.beginPath();
+                ctx.moveTo(base.x-10, base.y); ctx.lineTo(base.x+10, base.y); ctx.lineTo(top.x+10, top.y); ctx.lineTo(top.x-10, top.y); ctx.fill();
+                ctx.fillStyle = '#94a3b8'; ctx.beginPath(); ctx.ellipse(top.x, top.y, 12, 6, 0, 0, Math.PI*2); ctx.fill();
             });
 
-            // Cible
             const tPos = toIso(state.target.x, state.target.y, 5 + Math.sin(Date.now()/300)*5);
             const tShadow = toIso(state.target.x, state.target.y, 0);
-            ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            ctx.beginPath(); ctx.ellipse(tShadow.x, tShadow.y, 10, 5, 0, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#fbbf24'; 
-            ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 8, 0, Math.PI*2); ctx.fill();
-            ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 12, 0, Math.PI*2); ctx.stroke();
+            ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.ellipse(tShadow.x, tShadow.y, 10, 5, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 8, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 12, 0, Math.PI*2); ctx.stroke();
 
-            // Trace
             if(state.path.length > 1) {
                 ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
                 ctx.beginPath();
@@ -666,42 +730,28 @@
                     ctx.lineTo(p.x, p.y);
                 }
                 const currBase = toIso(state.drone.x, state.drone.y, 0);
-                ctx.lineTo(currBase.x, currBase.y);
-                ctx.stroke();
-                ctx.globalAlpha = 1.0;
+                ctx.lineTo(currBase.x, currBase.y); ctx.stroke(); ctx.globalAlpha = 1.0;
             }
 
-            // Drone
-            const dX = state.drone.x;
-            const dY = state.drone.y;
-            const dZ = state.drone.altitude;
-            const dIso = toIso(dX, dY, dZ);
-            const dShadow = toIso(dX, dY, 0);
+            const dX = state.drone.x; const dY = state.drone.y; const dZ = state.drone.altitude;
+            const dIso = toIso(dX, dY, dZ); const dShadow = toIso(dX, dY, 0);
 
             if(dZ > 0) {
                 ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
-                ctx.beginPath(); ctx.moveTo(dShadow.x, dShadow.y); ctx.lineTo(dIso.x, dIso.y); ctx.stroke();
-                ctx.setLineDash([]);
+                ctx.beginPath(); ctx.moveTo(dShadow.x, dShadow.y); ctx.lineTo(dIso.x, dIso.y); ctx.stroke(); ctx.setLineDash([]);
             }
 
             ctx.fillStyle = 'rgba(0,0,0,0.15)';
             const sRadius = Math.max(5, 15 - dZ/20);
             ctx.beginPath(); ctx.ellipse(dShadow.x, dShadow.y, sRadius, sRadius*0.5, 0, 0, Math.PI*2); ctx.fill();
 
-            ctx.save();
-            ctx.translate(dIso.x, dIso.y);
-            ctx.fillStyle = '#2563eb';
-            ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, Math.PI*2); ctx.fill();
-            
+            ctx.save(); ctx.translate(dIso.x, dIso.y);
+            ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#bfdbfe';
             const propOffsets = [{x:-12, y:-6}, {x:12, y:-6}, {x:-12, y:6}, {x:12, y:6}];
             const spin = state.drone.isFlying ? Math.sin(Date.now())*2 : 0;
-            propOffsets.forEach(po => {
-                ctx.beginPath(); ctx.ellipse(po.x, po.y, 6+spin, 3, 0, 0, Math.PI*2); ctx.fill();
-            });
-
-            ctx.fillStyle = state.drone.isFlying ? '#10b981' : '#ef4444';
-            ctx.beginPath(); ctx.arc(0, -2, 3, 0, Math.PI*2); ctx.fill();
+            propOffsets.forEach(po => { ctx.beginPath(); ctx.ellipse(po.x, po.y, 6+spin, 3, 0, 0, Math.PI*2); ctx.fill(); });
+            ctx.fillStyle = state.drone.isFlying ? '#10b981' : '#ef4444'; ctx.beginPath(); ctx.arc(0, -2, 3, 0, Math.PI*2); ctx.fill();
             ctx.restore();
         }
 
