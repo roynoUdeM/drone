@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Drone Academy - Expert</title>
+    <title>Drone Academy - Expert 3D</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -29,7 +29,6 @@
         </div>
         
         <div class="flex items-center gap-2 md:gap-4">
-            <!-- Bouton Niveaux -->
             <button onclick="openLevelModal()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1 border border-indigo-400 transition-colors">
                 <i data-lucide="list" class="w-3 h-3"></i> NIVEAUX
             </button>
@@ -49,8 +48,8 @@
             <div id="desktop-tools" class="space-y-3"></div>
             <div class="mt-8 p-4 bg-white/50 rounded-xl border border-white text-sm text-slate-600">
                 <p class="font-bold mb-1 text-indigo-600">💡 Astuce :</p>
-                Le code du niveau s'affiche quand tu gagnes.<br>
-                Note-le pour revenir plus tard !
+                Certains murs peuvent être survolés avec <span class="font-bold text-cyan-600">Monter</span>.<br>
+                Fais attention à la hauteur de l'étoile !
             </div>
         </div>
 
@@ -164,26 +163,34 @@
         const GRID_OFFSET = GRID_CELL / 2;
         
         // --- Niveaux (15 Fixes) ---
+        // target: [x, y, z] (z=0 veut dire au sol, z=40 ou 80 flotte)
+        // obstacles: [x, y, hauteur] (hauteur 40 = mur survolable, hauteur 150 = pilier bloquant)
         const PREDEFINED_LEVELS = [
-            { id: 1, start: [1, 4, 90], target: [4, 4], obstacles: [], hint: "Va tout droit !" },
-            { id: 2, start: [1, 4, 90], target: [6, 4], obstacles: [], hint: "Un peu plus loin..." },
-            { id: 3, start: [2, 6, 0], target: [2, 2], obstacles: [], hint: "Attention au sens." },
-            { id: 4, start: [1, 6, 90], target: [1, 3], obstacles: [], hint: "Utilise 'Tourner Gauche'." },
-            { id: 5, start: [1, 1, 90], target: [4, 4], obstacles: [], hint: "L'escalier." },
-            { id: 6, start: [1, 3, 90], target: [5, 3], obstacles: [[3, 3]], hint: "Contourne le rocher !" },
-            { id: 7, start: [1, 1, 90], target: [1, 6], obstacles: [[1, 3], [1, 4]], hint: "Chemin bloqué." },
-            { id: 8, start: [3, 6, 0], target: [3, 2], obstacles: [[3, 4]], hint: "Petit détour." },
-            { id: 9, start: [1, 1, 90], target: [6, 6], obstacles: [[2, 2], [3, 3], [4, 4], [5, 5]], hint: "Diagonale bloquée." },
-            { id: 10, start: [1, 4, 90], target: [6, 4], obstacles: [[3, 3], [3, 4], [3, 5]], hint: "Le mur." },
-            { id: 11, start: [1, 1, 90], target: [6, 1], obstacles: [[2, 1], [3, 1], [4, 1], [5, 1], [3, 2], [3, 0]], hint: "Labyrinthe 1." },
-            { id: 12, start: [3, 3, 0], target: [3, 4], obstacles: [[3, 2], [2, 3], [4, 3], [2, 4], [4, 4], [3, 5]], hint: "Prison." },
-            { id: 13, start: [0, 7, 90], target: [7, 0], obstacles: [[1, 6], [2, 5], [3, 4], [4, 3], [5, 2], [6, 1]], hint: "Passage étroit." },
-            { id: 14, start: [1, 4, 90], target: [6, 4], obstacles: [[2, 4], [4, 4], [2, 3], [4, 5], [3, 1], [3, 7]], hint: "Zig-zag." },
-            { id: 15, start: [0, 0, 90], target: [7, 7], obstacles: [[1, 0], [0, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 6], [6, 7], [1, 2], [2, 1]], hint: "Défi final !" }
+            { id: 1, start: [1, 4, 90], target: [4, 4, 0], obstacles: [], hint: "Va tout droit et atterris." },
+            { id: 2, start: [1, 4, 90], target: [6, 4, 0], obstacles: [], hint: "Un peu plus loin..." },
+            { id: 3, start: [2, 6, 0], target: [2, 2, 0], obstacles: [], hint: "Attention au sens." },
+            { id: 4, start: [1, 6, 90], target: [1, 3, 0], obstacles: [], hint: "Utilise 'Tourner Gauche'." },
+            { id: 5, start: [1, 1, 90], target: [4, 4, 0], obstacles: [], hint: "L'escalier." },
+            
+            // Introduction à la hauteur (Alt: 40=Décollage, 80=Monter, 120=Monterx2)
+            { id: 6, start: [1, 3, 90], target: [5, 3, 0], obstacles: [[3, 3, 60]], hint: "Utilise 'Monter' pour passer par-dessus le muret !" },
+            { id: 7, start: [1, 1, 90], target: [4, 1, 80], obstacles: [], hint: "L'étoile vole à 80m ! Monte pour l'attraper (sans atterrir)." },
+            { id: 8, start: [2, 6, 0], target: [2, 2, 0], obstacles: [[2, 4, 150]], hint: "Ce pilier géant (150m) ne peut pas être survolé. Contourne-le." },
+            { id: 9, start: [1, 4, 90], target: [6, 4, 40], obstacles: [[3, 4, 60], [4, 4, 60]], hint: "Survole le long mur, puis l'étoile t'attend en l'air (40m)." },
+            { id: 10, start: [1, 4, 90], target: [6, 4, 0], obstacles: [[3, 3, 60], [3, 4, 60], [3, 5, 60]], hint: "Le grand mur. Passe par-dessus et n'oublie pas d'atterrir." },
+            
+            // Défis complexes
+            { id: 11, start: [1, 1, 90], target: [6, 1, 80], obstacles: [[2, 1, 150], [3, 1, 150], [4, 1, 60], [5, 1, 150]], hint: "Trouve la faille dans le mur pour passer." },
+            { id: 12, start: [3, 3, 0], target: [3, 4, 0], obstacles: [[3, 2, 60], [2, 3, 60], [4, 3, 60], [2, 4, 60], [4, 4, 60], [3, 5, 60]], hint: "Tu es encerclé par un muret. Échappe-toi par le haut !" },
+            { id: 13, start: [1, 6, 90], target: [6, 6, 0], obstacles: [[3, 6, 120]], hint: "Ce mur est très haut (120m). Monte DEUX fois pour passer." },
+            { id: 14, start: [1, 4, 90], target: [6, 4, 40], obstacles: [[2, 4, 150], [4, 4, 150], [3, 3, 60], [5, 5, 60]], hint: "Slalom 3D : contourne les hauts piliers et survole les petits." },
+            { id: 15, start: [0, 0, 90], target: [7, 7, 80], obstacles: [[1, 0, 150], [0, 1, 150], [3, 3, 60], [4, 4, 150], [5, 5, 60]], hint: "L'épreuve finale ! Analyse bien le relief." }
         ];
 
         const BLOCK_TYPES = {
-            TAKEOFF: { id: 'TAKEOFF', label: 'Décoller', color: 'bg-green-500', icon: 'rocket', action: (d) => ({ ...d, isFlying: true, altitude: 60 }) },
+            TAKEOFF: { id: 'TAKEOFF', label: 'Décoller', color: 'bg-green-500', icon: 'rocket', action: (d) => ({ ...d, isFlying: true, altitude: 40 }) }, // Décollage fixe à 40
+            UP: { id: 'UP', label: 'Monter', color: 'bg-cyan-500', icon: 'chevrons-up', action: (d) => ({ ...d, altitude: Math.min(d.altitude + 40, 160) }) },
+            DOWN: { id: 'DOWN', label: 'Descendre', color: 'bg-cyan-600', icon: 'chevrons-down', action: (d) => ({ ...d, altitude: Math.max(d.altitude - 40, 20) }) }, // Ne peut pas atterrir avec ce bouton
             FORWARD: { id: 'FORWARD', label: 'Avancer', color: 'bg-blue-500', icon: 'arrow-up', action: (d) => {
                 const step = GRID_CELL; 
                 const rad = (d.rotation * Math.PI) / 180;
@@ -198,8 +205,8 @@
 
         // --- État Global ---
         let state = {
-            currentLevel: null, // Objet niveau
-            levelNumber: 1,     // Numéro affiché
+            currentLevel: null,
+            levelNumber: 1,
             program: [],
             isPlaying: false,
             activeBlockIndex: -1,
@@ -207,14 +214,14 @@
             viewMode: 'TOP',
             drone: { x: 0, y: 0, rotation: 0, isFlying: false, altitude: 0 },
             path: [],
-            target: { x: 0, y: 0 },
-            obstacles: [] // Array of {gx, gy, x, y}
+            target: { x: 0, y: 0, altitude: 0 },
+            obstacles: [] // Array of {gx, gy, x, y, h}
         };
 
         window.onload = () => {
             initTools();
             buildLevelGrid();
-            loadLevel(1); // Charge niveau 1
+            loadLevel(1);
             loop(); 
         };
 
@@ -278,15 +285,21 @@
             const sy = lvlData.start[1] * GRID_CELL + GRID_OFFSET;
             const tx = lvlData.target[0] * GRID_CELL + GRID_OFFSET;
             const ty = lvlData.target[1] * GRID_CELL + GRID_OFFSET;
+            const tz = lvlData.target[2] || 0;
 
-            state.obstacles = lvlData.obstacles.map(o => ({ gx: o[0], gy: o[1], x: o[0]*GRID_CELL+GRID_OFFSET, y: o[1]*GRID_CELL+GRID_OFFSET }));
+            state.obstacles = lvlData.obstacles.map(o => ({ 
+                gx: o[0], gy: o[1], 
+                x: o[0]*GRID_CELL+GRID_OFFSET, y: o[1]*GRID_CELL+GRID_OFFSET,
+                h: o[2] || 60 
+            }));
+            
             state.drone = { x: sx, y: sy, rotation: lvlData.start[2], isFlying: false, altitude: 0 };
-            state.target = { x: tx, y: ty };
+            state.target = { x: tx, y: ty, altitude: tz };
             state.path = [{ x: sx, y: sy }];
             state.activeBlockIndex = -1;
             state.isPlaying = false;
             state.missionComplete = false;
-            state.program = []; // Reset programme au changement de niveau
+            state.program = [];
 
             // UI Updates
             document.getElementById('level-indicator').innerText = num > 15 ? "∞" : num;
@@ -305,9 +318,7 @@
         }
 
         // --- Générateur de Niveaux Aléatoires ---
-        
         function generateRandomLevel(num) {
-            // Grille 0-7 (8x8)
             const MAX = 8;
             let start, target, obstacles;
             let isValid = false;
@@ -317,48 +328,42 @@
                 attempts++;
                 obstacles = [];
                 
-                // 1. Start Pos
                 start = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX), Math.floor(Math.random()*4)*90];
                 
-                // 2. Target Pos (Distance min 3 cases)
                 do {
-                    target = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX)];
+                    target = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX), Math.floor(Math.random()*3)*40]; // Alt 0, 40 ou 80
                 } while (Math.abs(target[0]-start[0]) + Math.abs(target[1]-start[1]) < 3);
 
-                // 3. Obstacles (5 à 12 blocs)
                 const obsCount = 5 + Math.floor(Math.random() * 8);
                 for(let i=0; i<obsCount; i++) {
                     const ox = Math.floor(Math.random()*MAX);
                     const oy = Math.floor(Math.random()*MAX);
-                    // Pas sur start, pas sur target, pas doublon
+                    const oh = 40 + Math.floor(Math.random()*3)*40; // Hauteurs 40, 80, 120
+                    
                     if ((ox !== start[0] || oy !== start[1]) && 
                         (ox !== target[0] || oy !== target[1]) &&
                         !obstacles.some(o => o[0]===ox && o[1]===oy)) {
-                        obstacles.push([ox, oy]);
+                        obstacles.push([ox, oy, oh]);
                     }
                 }
-
-                // 4. Validation Pathfinding (BFS simple)
-                if (checkPathExists(start, target, obstacles, MAX)) {
-                    isValid = true;
-                }
+                
+                // Simplified validation (just checking if 2D path exists, 3D is mostly passable with UP)
+                isValid = checkPathExists(start, target, obstacles.filter(o => o[2] > 100), MAX); // Only pillars block the 3D path completely
             }
 
             return {
                 id: num,
-                code: "RND", // Pas de code de sauvegarde pour l'aléatoire
                 start: start,
                 target: target,
                 obstacles: obstacles,
-                hint: "Trouve le chemin !"
+                hint: "Généré aléatoirement ! Analyse le relief."
             };
         }
 
-        function checkPathExists(start, target, obstacles, size) {
+        function checkPathExists(start, target, blockingObstacles, size) {
             const q = [[start[0], start[1]]];
             const visited = new Set();
             visited.add(`${start[0]},${start[1]}`);
-            
             const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
 
             while(q.length > 0) {
@@ -366,12 +371,9 @@
                 if(cx === target[0] && cy === target[1]) return true;
 
                 for(let d of dirs) {
-                    const nx = cx + d[0];
-                    const ny = cy + d[1];
-                    // Bounds
+                    const nx = cx + d[0]; const ny = cy + d[1];
                     if(nx >= 0 && nx < size && ny >= 0 && ny < size) {
-                        // Collision
-                        if(!obstacles.some(o => o[0]===nx && o[1]===ny)) {
+                        if(!blockingObstacles.some(o => o[0]===nx && o[1]===ny)) {
                             if(!visited.has(`${nx},${ny}`)) {
                                 visited.add(`${nx},${ny}`);
                                 q.push([nx, ny]);
@@ -417,6 +419,22 @@
             }
         }
 
+        function resetSimulation() {
+            const lvl = state.currentLevel;
+            const sx = lvl.start[0] * GRID_CELL + GRID_OFFSET;
+            const sy = lvl.start[1] * GRID_CELL + GRID_OFFSET;
+            
+            state.drone = { x: sx, y: sy, rotation: lvl.start[2], isFlying: false, altitude: 0 };
+            state.path = [{ x: sx, y: sy }];
+            state.activeBlockIndex = -1;
+            state.isPlaying = false;
+            state.missionComplete = false;
+            
+            setViewMode('TOP');
+            updateUI();
+            updateProgramUI();
+        }
+
         async function runProgram() {
             if (state.program.length === 0) {
                 showMessage("Ajoute des blocs d'abord !", 'error');
@@ -446,7 +464,7 @@
 
                     const nextDrone = blockType.action(currentDrone);
                     
-                    // Collision Bounds
+                    // Collision Murs Extérieurs
                     if (nextDrone.x < 0 || nextDrone.x > CANVAS_SIZE || nextDrone.y < 0 || nextDrone.y > CANVAS_SIZE) {
                          await animateDrone(currentDrone, nextDrone);
                          showMessage("Alerte ! Tu sors de la zone !", 'error');
@@ -455,14 +473,26 @@
                          return;
                     }
 
-                    // Collision Obstacles
+                    // Collision Obstacles 3D
                     const ngx = Math.floor(nextDrone.x / GRID_CELL);
                     const ngy = Math.floor(nextDrone.y / GRID_CELL);
                     const hitObstacle = state.obstacles.find(o => o.gx === ngx && o.gy === ngy);
-                    if (hitObstacle) {
+                    
+                    // Crash si on est trop bas pour survoler l'obstacle
+                    if (hitObstacle && nextDrone.altitude < hitObstacle.h + 10) {
                          await animateDrone(currentDrone, nextDrone); 
                          state.drone = nextDrone; 
-                         showMessage("BOUM ! Attention au rocher !", 'error');
+                         showMessage(`CRASH ! L'obstacle fait ${hitObstacle.h}m de haut.`, 'error');
+                         state.isPlaying = false;
+                         updateUI();
+                         return;
+                    }
+                    
+                    // Crash si on Atterit sur un obstacle
+                    if (hitObstacle && nextDrone.altitude === 0) {
+                         await animateDrone(currentDrone, nextDrone); 
+                         state.drone = nextDrone; 
+                         showMessage("Tu ne peux pas atterrir sur un obstacle !", 'error');
                          state.isPlaying = false;
                          updateUI();
                          return;
@@ -517,19 +547,36 @@
 
         function checkWin(finalDrone) {
             const dist = Math.sqrt(Math.pow(finalDrone.x - state.target.x, 2) + Math.pow(finalDrone.y - state.target.y, 2));
+            const altDist = Math.abs(finalDrone.altitude - state.target.altitude);
+
             if (dist < 25) {
-                if (!finalDrone.isFlying || finalDrone.altitude < 10) {
-                    state.missionComplete = true;
-                    showMessage("BRAVO !", 'success');
-                    updateUI();
-                    
-                    setTimeout(() => document.getElementById('modal-success').classList.remove('hidden'), 800);
+                if (state.target.altitude === 0) {
+                    // Cible au sol, il faut atterrir
+                    if (!finalDrone.isFlying || finalDrone.altitude < 10) {
+                        winLevel();
+                    } else {
+                        showMessage("Presque ! Il faut atterrir sur la cible.", 'warning');
+                    }
                 } else {
-                    showMessage("Atterris pour valider !", 'warning');
+                    // Cible en l'air, il faut être à la bonne hauteur (et voler)
+                    if (altDist < 15 && finalDrone.isFlying) {
+                        winLevel();
+                    } else if (finalDrone.altitude < state.target.altitude) {
+                        showMessage("L'étoile est plus haute ! Monte encore.", 'warning');
+                    } else {
+                        showMessage("Tu es trop haut ! Redescends un peu.", 'warning');
+                    }
                 }
             } else {
-                showMessage("Pas tout à fait... Vérifie ton code.", 'info');
+                showMessage("L'étoile n'est pas ici. Analyse ton parcours.", 'info');
             }
+        }
+
+        function winLevel() {
+            state.missionComplete = true;
+            showMessage("BRAVO !", 'success');
+            updateUI();
+            setTimeout(() => document.getElementById('modal-success').classList.remove('hidden'), 800);
         }
 
         function updateUI() {
@@ -635,14 +682,22 @@
             state.obstacles.forEach(o => {
                 ctx.beginPath(); ctx.roundRect(o.x - 20, o.y - 20, 40, 40, 4); ctx.fill();
                 ctx.fillStyle = '#64748b'; ctx.beginPath(); ctx.arc(o.x-5, o.y-5, 5, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'white'; ctx.font = "10px sans-serif"; ctx.textAlign="center";
+                ctx.fillText(o.h + "m", o.x, o.y+15);
                 ctx.fillStyle = '#94a3b8';
             });
 
             ctx.save(); ctx.translate(state.target.x, state.target.y);
+            const targetScale = 1 + (state.target.altitude / 300);
+            ctx.scale(targetScale, targetScale);
             ctx.fillStyle = '#fbbf24'; ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 10;
             ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
             ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(0,0,18 + Math.sin(Date.now()/200)*2, 0, Math.PI*2); ctx.stroke();
+            if(state.target.altitude > 0) {
+                ctx.fillStyle = 'black'; ctx.font = "10px sans-serif"; ctx.textAlign="center";
+                ctx.fillText(state.target.altitude + "m", 0, 4);
+            }
             ctx.restore();
 
             if(state.path.length > 1) {
@@ -665,7 +720,7 @@
         }
 
         function drawIso(ctx) {
-            const originX = 200; const originY = 50;  
+            const originX = 200; const originY = 80; // Descendu un peu pour voir le ciel 
             const isoW = 0.8; const isoH = 0.4;    
             const toIso = (x, y, z) => ({ x: (x - y) * isoW + originX, y: (x + y) * isoH + originY - z });
 
@@ -679,21 +734,40 @@
                 ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
             }
 
-            state.obstacles.forEach(o => {
-                const z = 0; const h = 25;
+            // Trier les obstacles par "profondeur" Y pour qu'ils s'affichent bien en 3D
+            const sortedObstacles = [...state.obstacles].sort((a,b) => (a.x+a.y) - (b.x+b.y));
+
+            sortedObstacles.forEach(o => {
+                const h = o.h;
                 const base = toIso(o.x, o.y, 0); const top = toIso(o.x, o.y, h);
                 ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.ellipse(base.x, base.y, 15, 8, 0, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = '#64748b'; ctx.beginPath();
+                
+                // Coloration selon hauteur
+                ctx.fillStyle = h > 100 ? '#475569' : '#64748b'; 
+                ctx.beginPath();
                 ctx.moveTo(base.x-10, base.y); ctx.lineTo(base.x+10, base.y); ctx.lineTo(top.x+10, top.y); ctx.lineTo(top.x-10, top.y); ctx.fill();
-                ctx.fillStyle = '#94a3b8'; ctx.beginPath(); ctx.ellipse(top.x, top.y, 12, 6, 0, 0, Math.PI*2); ctx.fill();
+                
+                ctx.fillStyle = h > 100 ? '#64748b' : '#94a3b8'; 
+                ctx.beginPath(); ctx.ellipse(top.x, top.y, 12, 6, 0, 0, Math.PI*2); ctx.fill();
             });
 
-            const tPos = toIso(state.target.x, state.target.y, 5 + Math.sin(Date.now()/300)*5);
+            // Target
+            const tAlt = state.target.altitude;
+            const tPos = toIso(state.target.x, state.target.y, tAlt + (tAlt > 0 ? 5 + Math.sin(Date.now()/300)*5 : 0));
             const tShadow = toIso(state.target.x, state.target.y, 0);
+            
             ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.ellipse(tShadow.x, tShadow.y, 10, 5, 0, 0, Math.PI*2); ctx.fill();
+            
+            if (tAlt > 0) {
+                // Ligne pointillée si l'étoile vole
+                ctx.strokeStyle = '#fcd34d'; ctx.setLineDash([2,2]); ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(tShadow.x, tShadow.y); ctx.lineTo(tPos.x, tPos.y); ctx.stroke(); ctx.setLineDash([]);
+            }
+
             ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 8, 0, Math.PI*2); ctx.fill();
             ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 12, 0, Math.PI*2); ctx.stroke();
 
+            // Trace path
             if(state.path.length > 1) {
                 ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
                 ctx.beginPath();
@@ -707,6 +781,7 @@
                 ctx.lineTo(currBase.x, currBase.y); ctx.stroke(); ctx.globalAlpha = 1.0;
             }
 
+            // Drone
             const dX = state.drone.x; const dY = state.drone.y; const dZ = state.drone.altitude;
             const dIso = toIso(dX, dY, dZ); const dShadow = toIso(dX, dY, 0);
 
