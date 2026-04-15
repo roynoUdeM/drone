@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Drone Academy - Expert 3D</title>
+    <title>Drone Academy - Forêt & 3D</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -33,7 +33,7 @@
                 <i data-lucide="list" class="w-3 h-3"></i> NIVEAUX
             </button>
 
-            <!-- Nouvel indicateur d'altitude dans le menu -->
+            <!-- Indicateur d'altitude -->
             <div class="bg-indigo-800 px-3 py-1 rounded text-xs font-mono opacity-90 border border-indigo-500 flex flex-col items-center leading-tight min-w-[60px]">
                 <span class="text-[10px] text-cyan-300">ALTITUDE</span>
                 <span id="alt-indicator" class="text-white font-bold text-lg">0cm</span>
@@ -53,9 +53,10 @@
             <h2 class="text-slate-500 font-bold uppercase text-xs mb-4 tracking-wider">Commandes</h2>
             <div id="desktop-tools" class="space-y-3"></div>
             <div class="mt-8 p-4 bg-white/50 rounded-xl border border-white text-sm text-slate-600">
-                <p class="font-bold mb-1 text-indigo-600">💡 Mémos :</p>
-                <div class="flex items-center gap-2 mb-1"><div class="w-4 h-4 bg-slate-500 rounded"></div> <span class="text-xs">Mur (Passe au-dessus)</span></div>
-                <div class="flex items-center gap-2 mb-3"><div class="w-4 h-4 bg-sky-300 border border-sky-500 border-dashed rounded"></div> <span class="text-xs">Pont (Passe dessous)</span></div>
+                <p class="font-bold mb-2 text-indigo-600">💡 Mémos :</p>
+                <div class="flex items-center gap-2 mb-2"><div class="w-4 h-4 bg-slate-500 rounded"></div> <span class="text-[11px] leading-tight">Mur (Passe au-dessus)</span></div>
+                <div class="flex items-center gap-2 mb-2"><div class="w-4 h-4 bg-sky-300 border border-sky-500 border-dashed rounded"></div> <span class="text-[11px] leading-tight">Pont (Passe dessous)</span></div>
+                <div class="flex items-center gap-2 mb-3"><div class="w-4 h-4 bg-green-600 rounded-full"></div> <span class="text-[11px] leading-tight text-red-600 font-bold">Arbre (Infranchissable)</span></div>
                 <p class="text-xs font-bold text-slate-500 border-t pt-2 border-slate-300">
                     Décollage = 50 cm<br>
                     Monter = +25 cm<br>
@@ -176,63 +177,78 @@
         // --- Niveaux (20 Fixes) ---
         // Hauteurs drone : Décollage = 50. UP = +25 (75, 100). DOWN = -25 (25).
         // target: [x, y, alt]
-        // obstacles: [x, y, max_h, min_h] -> Si min_h=0 c'est un mur. Si min_h=50, c'est un pont.
+        // obstacles: [x, y, max_h, min_h] -> min_h=0 = mur. min_h=50 = pont.
+        // trees: [x, y] -> Murs infranchissables qui bloquent les côtés.
         const PREDEFINED_LEVELS = [
             // PHASE 1: LES BASES
-            { id: 1, start: [1, 4, 90], target: [4, 4, 0], obstacles: [], hint: "Va tout droit et atterris sur la cible." },
-            { id: 2, start: [1, 4, 90], target: [6, 4, 0], obstacles: [], hint: "Un peu plus loin cette fois." },
-            { id: 3, start: [2, 6, 0], target: [2, 2, 0], obstacles: [], hint: "Utilise les blocs pour tourner." },
-            { id: 4, start: [1, 6, 90], target: [1, 3, 0], obstacles: [], hint: "Il faut tourner vers la gauche." },
-            { id: 5, start: [1, 1, 90], target: [4, 4, 0], obstacles: [], hint: "Dessine un escalier." },
+            { id: 1, start: [1, 4, 90], target: [4, 4, 0], obstacles: [], trees: [], hint: "Va tout droit et atterris sur la cible." },
+            { id: 2, start: [1, 4, 90], target: [6, 4, 0], obstacles: [], trees: [], hint: "Un peu plus loin cette fois." },
+            { id: 3, start: [2, 6, 0], target: [2, 2, 0], obstacles: [], trees: [], hint: "Utilise les blocs pour tourner." },
+            { id: 4, start: [1, 6, 90], target: [1, 3, 0], obstacles: [], trees: [], hint: "Il faut tourner vers la gauche." },
+            { id: 5, start: [1, 1, 90], target: [4, 4, 0], obstacles: [], trees: [], hint: "Dessine un escalier." },
             
-            // PHASE 2: LA HAUTEUR (MURS à 75cm ou 100cm)
+            // PHASE 2: LA HAUTEUR (MURS à 75cm ou 100cm) - Ajout des arbres pour bloquer les détours
             { id: 6, start: [1, 4, 90], target: [6, 4, 0], 
               obstacles: [[3,1,75,0],[3,2,75,0],[3,3,75,0],[3,4,75,0],[3,5,75,0],[3,6,75,0]], 
-              hint: "Une muraille ! Utilise 'Monter' pour passer par-dessus (75cm)." },
-            { id: 7, start: [1, 1, 90], target: [4, 1, 75], obstacles: [], 
+              trees: [[3,0], [3,7]], // Bloque les extrémités
+              hint: "La forêt bloque les côtés ! Passe PAR-DESSUS le mur (75cm)." },
+            { id: 7, start: [1, 1, 90], target: [4, 1, 75], obstacles: [], trees: [], 
               hint: "L'étoile vole à 75cm. Monte 1 fois pour l'attraper (sans atterrir)." },
             { id: 8, start: [1, 3, 90], target: [6, 3, 0], 
               obstacles: [[3,0,150,0],[3,1,150,0],[3,2,150,0],[3,4,150,0],[3,5,150,0],[3,6,150,0],[3,7,150,0]], 
+              trees: [], 
               hint: "Le mur géant (150cm) est infranchissable. Cherche la faille." },
             { id: 9, start: [1, 4, 90], target: [6, 4, 50], 
               obstacles: [[4,1,75,0],[4,2,75,0],[4,3,75,0],[4,4,75,0],[4,5,75,0],[4,6,75,0]], 
-              hint: "Survole la muraille (75cm) et attrape l'étoile (50cm) en descendant." },
+              trees: [[4,0], [4,7]], 
+              hint: "Survole la muraille (75cm) et attrape l'étoile (50cm) de l'autre côté." },
             { id: 10, start: [1, 4, 90], target: [6, 4, 0], 
               obstacles: [[3,2,100,0],[3,3,100,0],[3,4,100,0],[3,5,100,0],[3,6,100,0]], 
-              hint: "Mur très haut (100cm). Il faudra monter DEUX fois (+25, +25)." },
+              trees: [[3,0],[3,1],[3,7]], 
+              hint: "Mur très haut (100cm) entouré d'arbres. Monte DEUX fois (+25, +25)." },
             
             // PHASE 3: LES PONTS (EN-DESSOUS à 50cm ou 75cm)
             { id: 11, start: [1, 4, 90], target: [6, 4, 0], 
               obstacles: [[3,1,150,50],[3,2,150,50],[3,3,150,50],[3,4,150,50],[3,5,150,50],[3,6,150,50]], 
-              hint: "C'est un PONT ! Tu vas te cogner la tête (50cm). Descends (-25cm) !" },
+              trees: [[3,0], [3,7]],
+              hint: "Un PONT encadré de forêt ! Descends (-25cm) pour passer en-dessous (50cm) !" },
             { id: 12, start: [1, 4, 90], target: [7, 4, 0], 
               obstacles: [[3,2,75,0],[3,3,75,0],[3,4,75,0],[3,5,75,0],[3,6,75,0], [5,2,150,50],[5,3,150,50],[5,4,150,50],[5,5,150,50],[5,6,150,50]], 
+              trees: [[3,0],[3,1],[3,7],[5,0],[5,1],[5,7]],
               hint: "Passe au-dessus du mur gris (75cm), puis passe sous le pont (50cm)." },
             { id: 13, start: [1, 4, 90], target: [7, 4, 0], 
               obstacles: [[3,2,150,50],[3,3,150,50],[3,4,150,50],[3,5,150,50],[3,6,150,50], [5,2,75,0],[5,3,75,0],[5,4,75,0],[5,5,75,0],[5,6,75,0]], 
+              trees: [[3,0],[3,1],[3,7],[5,0],[5,1],[5,7]],
               hint: "L'inverse ! D'abord sous le pont, puis au-dessus du mur." },
             { id: 14, start: [2, 2, 0], target: [6, 4, 0], 
               obstacles: [[1,1,75,0],[1,2,75,0],[1,3,75,0],[2,1,75,0],[2,3,75,0],[3,1,75,0],[3,2,75,0],[3,3,75,0]], 
+              trees: [[0,0],[0,7],[7,0],[7,7],[0,4],[7,4]], // Décor forêt autour
               hint: "Tu es encerclé par des murs ! Seule solution : les airs." },
             { id: 15, start: [1, 4, 90], target: [6, 4, 75], 
               obstacles: [[2,4,150,0], [4,4,150,0], [5,2,150,0]], 
-              hint: "Contourne ces piliers géants et attrape l'étoile en hauteur." },
+              trees: [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0], [0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]], // Forêt en bordure
+              hint: "Slalom géant dans la vallée forestière. Attrape l'étoile en hauteur." },
             
             // PHASE 4: EXPERT
             { id: 16, start: [1, 4, 90], target: [7, 4, 0], 
               obstacles: [[2,4,150,50],[3,4,150,50],[4,4,150,50],[5,4,150,50],[6,4,150,50]], 
-              hint: "Un très long tunnel de 50cm. Avance sans remonter la tête." },
+              trees: [[2,3],[3,3],[4,3],[5,3],[6,3], [2,5],[3,5],[4,5],[5,5],[6,5]], // Arbres formant les murs du tunnel
+              hint: "Un très long tunnel de 50cm entouré d'arbres. Avance sans remonter la tête." },
             { id: 17, start: [1, 1, 90], target: [6, 6, 0], 
               obstacles: [[2,2,75,0], [2,5,150,50], [5,2,150,50], [5,5,75,0]], 
+              trees: [[0,3],[1,3],[3,0],[3,1],[4,7],[5,7],[7,3],[7,4]],
               hint: "Analyse bien : quels sont les murs ? Quels sont les ponts ?" },
             { id: 18, start: [0, 7, 90], target: [7, 0, 75], 
               obstacles: [[1,6,150,0], [2,5,75,0], [3,4,150,0], [4,3,75,0], [5,2,150,0]], 
+              trees: [[0,6],[1,7], [2,4],[3,5], [4,2],[5,3], [6,0],[7,1]], // Encadre la diagonale
               hint: "Une diagonale alternant piliers géants et petits murs." },
             { id: 19, start: [3, 3, 0], target: [3, 6, 0], 
               obstacles: [[3,4,150,50], [2,3,150,50], [4,3,150,50], [3,2,150,50]], 
-              hint: "Tu es sous une plateforme. Trouve comment sortir." },
+              trees: [[2,2],[2,4],[4,2],[4,4]], // Bouche les coins pour forcer le passage sous pont
+              hint: "Tu es coincé sous des ponts dans la forêt. Trouve comment sortir." },
             { id: 20, start: [1, 4, 90], target: [6, 4, 100], 
               obstacles: [[3,2,75,0],[3,3,75,0],[3,5,75,0],[3,6,75,0], [4,4,150,0], [5,3,150,50],[5,4,150,50],[5,5,150,50]], 
+              trees: [[3,0],[3,1],[3,7], [5,0],[5,1],[5,2],[5,6],[5,7]], // Oblige à passer par les obstacles
               hint: "LE DÉFI ULTIME. Des murs, un pilier, et un pont. Bonne chance !" }
         ];
 
@@ -264,7 +280,8 @@
             drone: { x: 0, y: 0, rotation: 0, isFlying: false, altitude: 0 },
             path: [],
             target: { x: 0, y: 0, altitude: 0 },
-            obstacles: [] // Array of {gx, gy, x, y, h, bottom}
+            obstacles: [], // Array of {gx, gy, x, y, h, bottom}
+            trees: [] // Array of {gx, gy, x, y}
         };
 
         window.onload = () => {
@@ -341,6 +358,11 @@
                 h: o[2] || 75,
                 bottom: o[3] || 0
             }));
+
+            state.trees = (lvlData.trees || []).map(t => ({
+                gx: t[0], gy: t[1],
+                x: t[0]*GRID_CELL+GRID_OFFSET, y: t[1]*GRID_CELL+GRID_OFFSET
+            }));
             
             state.drone = { x: sx, y: sy, rotation: lvlData.start[2], isFlying: false, altitude: 0 };
             state.target = { x: tx, y: ty, altitude: tz };
@@ -369,13 +391,14 @@
         // --- Générateur de Niveaux Aléatoires ---
         function generateRandomLevel(num) {
             const MAX = 8;
-            let start, target, obstacles;
+            let start, target, obstacles, trees;
             let isValid = false;
             let attempts = 0;
 
             while (!isValid && attempts < 100) {
                 attempts++;
                 obstacles = [];
+                trees = [];
                 
                 start = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX), Math.floor(Math.random()*4)*90];
                 
@@ -392,12 +415,30 @@
                     
                     if ((ox !== start[0] || oy !== start[1]) && 
                         (ox !== target[0] || oy !== target[1]) &&
-                        !obstacles.some(o => o[0]===ox && o[1]===oy)) {
+                        !obstacles.some(o => o[0]===ox && o[1]===oy) &&
+                        !trees.some(t => t[0]===ox && t[1]===oy)) {
                         obstacles.push([ox, oy, Math.max(oh, obottom + 50), obottom]);
                     }
                 }
+
+                // Ajout d'arbres aléatoires
+                const treeCount = 4 + Math.floor(Math.random() * 6);
+                for(let i=0; i<treeCount; i++) {
+                    const tx = Math.floor(Math.random()*MAX);
+                    const ty = Math.floor(Math.random()*MAX);
+                    if ((tx !== start[0] || ty !== start[1]) && 
+                        (tx !== target[0] || ty !== target[1]) &&
+                        !obstacles.some(o => o[0]===tx && o[1]===ty) &&
+                        !trees.some(t => t[0]===tx && t[1]===ty)) {
+                        trees.push([tx, ty]);
+                    }
+                }
                 
-                isValid = checkPathExists(start, target, obstacles.filter(o => o[2] > 100 && o[3] === 0), MAX);
+                const solidBlocks = [
+                    ...obstacles.filter(o => o[2] > 100 && o[3] === 0), // Piliers géants
+                    ...trees.map(t => [t[0], t[1], 150, 0]) // Arbres = murs géants pour le pathfinding
+                ];
+                isValid = checkPathExists(start, target, solidBlocks, MAX);
             }
 
             return {
@@ -405,7 +446,8 @@
                 start: start,
                 target: target,
                 obstacles: obstacles,
-                hint: "Généré aléatoirement ! Analyse bien le relief et les ponts."
+                trees: trees,
+                hint: "Généré aléatoirement ! Analyse bien le relief, les ponts et les arbres."
             };
         }
 
@@ -522,9 +564,21 @@
                          return;
                     }
 
-                    // Collision Obstacles 3D Complexes
                     const ngx = Math.floor(nextDrone.x / GRID_CELL);
                     const ngy = Math.floor(nextDrone.y / GRID_CELL);
+
+                    // Collision avec les Arbres (infranchissables)
+                    const hitTree = state.trees.find(t => t.gx === ngx && t.gy === ngy);
+                    if (hitTree) {
+                         await animateDrone(currentDrone, nextDrone); 
+                         state.drone = nextDrone; 
+                         showMessage("ACCIDENT ! Collision avec un arbre.", 'error');
+                         state.isPlaying = false;
+                         updateUI();
+                         return;
+                    }
+
+                    // Collision Obstacles 3D Complexes (Murs et Ponts)
                     const hitObstacles = state.obstacles.filter(o => o.gx === ngx && o.gy === ngy);
                     
                     for (let obs of hitObstacles) {
@@ -552,8 +606,8 @@
                         }
                     }
 
-                    // Crash si on Atterrit sur un obstacle
-                    if (hitObstacles.length > 0 && nextDrone.altitude === 0) {
+                    // Crash si on Atterrit sur un obstacle ou un arbre
+                    if ((hitObstacles.length > 0 || hitTree) && nextDrone.altitude === 0) {
                          await animateDrone(currentDrone, nextDrone); 
                          state.drone = nextDrone; 
                          showMessage("ACCIDENT ! Atterrissage sur un obstacle !", 'error');
@@ -800,6 +854,17 @@
                 ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(CANVAS_SIZE,i); ctx.stroke();
             }
             
+            // Arbres 2D
+            state.trees.forEach(t => {
+                ctx.fillStyle = '#14532d'; 
+                ctx.beginPath(); ctx.arc(t.x, t.y, 22, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#16a34a'; 
+                ctx.beginPath(); ctx.arc(t.x, t.y, 18, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#4ade80'; 
+                ctx.beginPath(); ctx.arc(t.x-4, t.y-4, 6, 0, Math.PI*2); ctx.fill();
+            });
+
+            // Murs et Ponts 2D
             state.obstacles.forEach(o => {
                 if (o.bottom > 0) {
                     ctx.fillStyle = 'rgba(56, 189, 248, 0.3)'; 
@@ -854,7 +919,6 @@
             const viewY = state.drone.y - (state.drone.altitude * 0.5);
             drawDrone2D(ctx, state.drone.x, viewY, state.drone.rotation, state.drone.altitude);
             
-            // Indicateur d'altitude au-dessus du drone 2D
             drawAltitudeBadge(ctx, state.drone.x, viewY - 30, state.drone.altitude);
         }
 
@@ -886,6 +950,10 @@
 
             state.obstacles.forEach(o => {
                 renderQueue.push({ type: 'obs', x: o.x, y: o.y, z: o.bottom, data: o, sortKey: o.x + o.y });
+            });
+            
+            state.trees.forEach(t => {
+                renderQueue.push({ type: 'tree', x: t.x, y: t.y, z: 0, data: t, sortKey: t.x + t.y });
             });
 
             renderQueue.push({ type: 'target', x: state.target.x, y: state.target.y, z: state.target.altitude, data: state.target, sortKey: state.target.x + state.target.y });
@@ -921,7 +989,29 @@
 
                         drawIsoCube(ctx, o.x, o.y, bottom, h, '#7dd3fc', '#0284c7', '#0ea5e9');
                     }
-                } 
+                }
+                else if (item.type === 'tree') {
+                    const t = item.data;
+                    const groundShadow = toIso(t.x, t.y, 0);
+                    
+                    ctx.fillStyle = 'rgba(0,0,0,0.2)'; 
+                    ctx.beginPath(); ctx.ellipse(groundShadow.x, groundShadow.y, 16, 8, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    // Tronc
+                    drawIsoCube(ctx, t.x, t.y, 0, 20, '#78350f', '#451a03', '#78350f');
+                    
+                    // Feuillage (sphères étagées)
+                    const center = toIso(t.x, t.y, 30);
+                    
+                    ctx.fillStyle = '#14532d'; // Ombre feuillage
+                    ctx.beginPath(); ctx.ellipse(center.x, center.y, 22, 18, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    ctx.fillStyle = '#16a34a'; // Feuillage principal
+                    ctx.beginPath(); ctx.ellipse(center.x, center.y - 15, 20, 16, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    ctx.fillStyle = '#4ade80'; // Reflet
+                    ctx.beginPath(); ctx.ellipse(center.x - 5, center.y - 25, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+                }
                 else if (item.type === 'target') {
                     const t = item.data;
                     const tAlt = t.altitude;
@@ -961,7 +1051,6 @@
                     ctx.fillStyle = d.isFlying ? '#10b981' : '#ef4444'; ctx.beginPath(); ctx.arc(0, -2, 3, 0, Math.PI*2); ctx.fill();
                     ctx.restore();
                     
-                    // Indicateur d'altitude au-dessus du drone 3D
                     drawAltitudeBadge(ctx, dIso.x, dIso.y - 30, d.altitude);
                 }
             });
