@@ -33,6 +33,12 @@
                 <i data-lucide="list" class="w-3 h-3"></i> NIVEAUX
             </button>
 
+            <!-- Nouvel indicateur d'altitude dans le menu -->
+            <div class="bg-indigo-800 px-3 py-1 rounded text-xs font-mono opacity-90 border border-indigo-500 flex flex-col items-center leading-tight min-w-[60px]">
+                <span class="text-[10px] text-cyan-300">ALTITUDE</span>
+                <span id="alt-indicator" class="text-white font-bold text-lg">0cm</span>
+            </div>
+
             <div class="bg-indigo-800 px-3 py-1 rounded text-xs font-mono opacity-90 border border-indigo-500 flex flex-col items-center leading-tight">
                 <span class="text-[10px] text-indigo-300">NIVEAU</span>
                 <span id="level-indicator" class="text-white font-bold text-lg">1</span>
@@ -47,9 +53,14 @@
             <h2 class="text-slate-500 font-bold uppercase text-xs mb-4 tracking-wider">Commandes</h2>
             <div id="desktop-tools" class="space-y-3"></div>
             <div class="mt-8 p-4 bg-white/50 rounded-xl border border-white text-sm text-slate-600">
-                <p class="font-bold mb-1 text-indigo-600">💡 Astuce :</p>
-                Certains murs peuvent être survolés avec <span class="font-bold text-cyan-600">Monter</span>.<br>
-                Fais attention à la hauteur de l'étoile !
+                <p class="font-bold mb-1 text-indigo-600">💡 Mémos :</p>
+                <div class="flex items-center gap-2 mb-1"><div class="w-4 h-4 bg-slate-500 rounded"></div> <span class="text-xs">Mur (Passe au-dessus)</span></div>
+                <div class="flex items-center gap-2 mb-3"><div class="w-4 h-4 bg-sky-300 border border-sky-500 border-dashed rounded"></div> <span class="text-xs">Pont (Passe dessous)</span></div>
+                <p class="text-xs font-bold text-slate-500 border-t pt-2 border-slate-300">
+                    Décollage = 50 cm<br>
+                    Monter = +25 cm<br>
+                    Descendre = -25 cm
+                </p>
             </div>
         </div>
 
@@ -145,12 +156,12 @@
             </h3>
             
             <div id="level-grid" class="grid grid-cols-5 gap-3 overflow-y-auto p-2 no-scrollbar">
-                <!-- Les boutons de niveaux seront injectés ici par JS -->
+                <!-- Les boutons de niveaux injectés par JS -->
             </div>
             
             <div class="mt-4 pt-4 border-t border-slate-200">
-                <button onclick="selectLevel(16)" class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-3 rounded-xl font-bold shadow-lg hover:from-purple-600 hover:to-indigo-600 w-full flex items-center justify-center gap-2">
-                    <i data-lucide="infinity" class="w-5 h-5"></i> Mode Aléatoire Infini
+                <button onclick="selectLevel(21)" class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-3 rounded-xl font-bold shadow-lg hover:from-purple-600 hover:to-indigo-600 w-full flex items-center justify-center gap-2">
+                    <i data-lucide="infinity" class="w-5 h-5"></i> Aléatoire Infini
                 </button>
             </div>
         </div>
@@ -162,35 +173,73 @@
         const GRID_CELL = 50;
         const GRID_OFFSET = GRID_CELL / 2;
         
-        // --- Niveaux (15 Fixes) ---
-        // target: [x, y, z] (z=0 veut dire au sol, z=40 ou 80 flotte)
-        // obstacles: [x, y, hauteur] (hauteur 40 = mur survolable, hauteur 150 = pilier bloquant)
+        // --- Niveaux (20 Fixes) ---
+        // Hauteurs drone : Décollage = 50. UP = +25 (75, 100). DOWN = -25 (25).
+        // target: [x, y, alt]
+        // obstacles: [x, y, max_h, min_h] -> Si min_h=0 c'est un mur. Si min_h=50, c'est un pont.
         const PREDEFINED_LEVELS = [
-            { id: 1, start: [1, 4, 90], target: [4, 4, 0], obstacles: [], hint: "Va tout droit et atterris." },
-            { id: 2, start: [1, 4, 90], target: [6, 4, 0], obstacles: [], hint: "Un peu plus loin..." },
-            { id: 3, start: [2, 6, 0], target: [2, 2, 0], obstacles: [], hint: "Attention au sens." },
-            { id: 4, start: [1, 6, 90], target: [1, 3, 0], obstacles: [], hint: "Utilise 'Tourner Gauche'." },
-            { id: 5, start: [1, 1, 90], target: [4, 4, 0], obstacles: [], hint: "L'escalier." },
+            // PHASE 1: LES BASES
+            { id: 1, start: [1, 4, 90], target: [4, 4, 0], obstacles: [], hint: "Va tout droit et atterris sur la cible." },
+            { id: 2, start: [1, 4, 90], target: [6, 4, 0], obstacles: [], hint: "Un peu plus loin cette fois." },
+            { id: 3, start: [2, 6, 0], target: [2, 2, 0], obstacles: [], hint: "Utilise les blocs pour tourner." },
+            { id: 4, start: [1, 6, 90], target: [1, 3, 0], obstacles: [], hint: "Il faut tourner vers la gauche." },
+            { id: 5, start: [1, 1, 90], target: [4, 4, 0], obstacles: [], hint: "Dessine un escalier." },
             
-            // Introduction à la hauteur (Alt: 40=Décollage, 80=Monter, 120=Monterx2)
-            { id: 6, start: [1, 3, 90], target: [5, 3, 0], obstacles: [[3, 3, 60]], hint: "Utilise 'Monter' pour passer par-dessus le muret !" },
-            { id: 7, start: [1, 1, 90], target: [4, 1, 80], obstacles: [], hint: "L'étoile vole à 80m ! Monte pour l'attraper (sans atterrir)." },
-            { id: 8, start: [2, 6, 0], target: [2, 2, 0], obstacles: [[2, 4, 150]], hint: "Ce pilier géant (150m) ne peut pas être survolé. Contourne-le." },
-            { id: 9, start: [1, 4, 90], target: [6, 4, 40], obstacles: [[3, 4, 60], [4, 4, 60]], hint: "Survole le long mur, puis l'étoile t'attend en l'air (40m)." },
-            { id: 10, start: [1, 4, 90], target: [6, 4, 0], obstacles: [[3, 3, 60], [3, 4, 60], [3, 5, 60]], hint: "Le grand mur. Passe par-dessus et n'oublie pas d'atterrir." },
+            // PHASE 2: LA HAUTEUR (MURS à 75cm ou 100cm)
+            { id: 6, start: [1, 4, 90], target: [6, 4, 0], 
+              obstacles: [[3,1,75,0],[3,2,75,0],[3,3,75,0],[3,4,75,0],[3,5,75,0],[3,6,75,0]], 
+              hint: "Une muraille ! Utilise 'Monter' pour passer par-dessus (75cm)." },
+            { id: 7, start: [1, 1, 90], target: [4, 1, 75], obstacles: [], 
+              hint: "L'étoile vole à 75cm. Monte 1 fois pour l'attraper (sans atterrir)." },
+            { id: 8, start: [1, 3, 90], target: [6, 3, 0], 
+              obstacles: [[3,0,150,0],[3,1,150,0],[3,2,150,0],[3,4,150,0],[3,5,150,0],[3,6,150,0],[3,7,150,0]], 
+              hint: "Le mur géant (150cm) est infranchissable. Cherche la faille." },
+            { id: 9, start: [1, 4, 90], target: [6, 4, 50], 
+              obstacles: [[4,1,75,0],[4,2,75,0],[4,3,75,0],[4,4,75,0],[4,5,75,0],[4,6,75,0]], 
+              hint: "Survole la muraille (75cm) et attrape l'étoile (50cm) en descendant." },
+            { id: 10, start: [1, 4, 90], target: [6, 4, 0], 
+              obstacles: [[3,2,100,0],[3,3,100,0],[3,4,100,0],[3,5,100,0],[3,6,100,0]], 
+              hint: "Mur très haut (100cm). Il faudra monter DEUX fois (+25, +25)." },
             
-            // Défis complexes
-            { id: 11, start: [1, 1, 90], target: [6, 1, 80], obstacles: [[2, 1, 150], [3, 1, 150], [4, 1, 60], [5, 1, 150]], hint: "Trouve la faille dans le mur pour passer." },
-            { id: 12, start: [3, 3, 0], target: [3, 4, 0], obstacles: [[3, 2, 60], [2, 3, 60], [4, 3, 60], [2, 4, 60], [4, 4, 60], [3, 5, 60]], hint: "Tu es encerclé par un muret. Échappe-toi par le haut !" },
-            { id: 13, start: [1, 6, 90], target: [6, 6, 0], obstacles: [[3, 6, 120]], hint: "Ce mur est très haut (120m). Monte DEUX fois pour passer." },
-            { id: 14, start: [1, 4, 90], target: [6, 4, 40], obstacles: [[2, 4, 150], [4, 4, 150], [3, 3, 60], [5, 5, 60]], hint: "Slalom 3D : contourne les hauts piliers et survole les petits." },
-            { id: 15, start: [0, 0, 90], target: [7, 7, 80], obstacles: [[1, 0, 150], [0, 1, 150], [3, 3, 60], [4, 4, 150], [5, 5, 60]], hint: "L'épreuve finale ! Analyse bien le relief." }
+            // PHASE 3: LES PONTS (EN-DESSOUS à 50cm ou 75cm)
+            { id: 11, start: [1, 4, 90], target: [6, 4, 0], 
+              obstacles: [[3,1,150,50],[3,2,150,50],[3,3,150,50],[3,4,150,50],[3,5,150,50],[3,6,150,50]], 
+              hint: "C'est un PONT ! Tu vas te cogner la tête (50cm). Descends (-25cm) !" },
+            { id: 12, start: [1, 4, 90], target: [7, 4, 0], 
+              obstacles: [[3,2,75,0],[3,3,75,0],[3,4,75,0],[3,5,75,0],[3,6,75,0], [5,2,150,50],[5,3,150,50],[5,4,150,50],[5,5,150,50],[5,6,150,50]], 
+              hint: "Passe au-dessus du mur gris (75cm), puis passe sous le pont (50cm)." },
+            { id: 13, start: [1, 4, 90], target: [7, 4, 0], 
+              obstacles: [[3,2,150,50],[3,3,150,50],[3,4,150,50],[3,5,150,50],[3,6,150,50], [5,2,75,0],[5,3,75,0],[5,4,75,0],[5,5,75,0],[5,6,75,0]], 
+              hint: "L'inverse ! D'abord sous le pont, puis au-dessus du mur." },
+            { id: 14, start: [2, 2, 0], target: [6, 4, 0], 
+              obstacles: [[1,1,75,0],[1,2,75,0],[1,3,75,0],[2,1,75,0],[2,3,75,0],[3,1,75,0],[3,2,75,0],[3,3,75,0]], 
+              hint: "Tu es encerclé par des murs ! Seule solution : les airs." },
+            { id: 15, start: [1, 4, 90], target: [6, 4, 75], 
+              obstacles: [[2,4,150,0], [4,4,150,0], [5,2,150,0]], 
+              hint: "Contourne ces piliers géants et attrape l'étoile en hauteur." },
+            
+            // PHASE 4: EXPERT
+            { id: 16, start: [1, 4, 90], target: [7, 4, 0], 
+              obstacles: [[2,4,150,50],[3,4,150,50],[4,4,150,50],[5,4,150,50],[6,4,150,50]], 
+              hint: "Un très long tunnel de 50cm. Avance sans remonter la tête." },
+            { id: 17, start: [1, 1, 90], target: [6, 6, 0], 
+              obstacles: [[2,2,75,0], [2,5,150,50], [5,2,150,50], [5,5,75,0]], 
+              hint: "Analyse bien : quels sont les murs ? Quels sont les ponts ?" },
+            { id: 18, start: [0, 7, 90], target: [7, 0, 75], 
+              obstacles: [[1,6,150,0], [2,5,75,0], [3,4,150,0], [4,3,75,0], [5,2,150,0]], 
+              hint: "Une diagonale alternant piliers géants et petits murs." },
+            { id: 19, start: [3, 3, 0], target: [3, 6, 0], 
+              obstacles: [[3,4,150,50], [2,3,150,50], [4,3,150,50], [3,2,150,50]], 
+              hint: "Tu es sous une plateforme. Trouve comment sortir." },
+            { id: 20, start: [1, 4, 90], target: [6, 4, 100], 
+              obstacles: [[3,2,75,0],[3,3,75,0],[3,5,75,0],[3,6,75,0], [4,4,150,0], [5,3,150,50],[5,4,150,50],[5,5,150,50]], 
+              hint: "LE DÉFI ULTIME. Des murs, un pilier, et un pont. Bonne chance !" }
         ];
 
         const BLOCK_TYPES = {
-            TAKEOFF: { id: 'TAKEOFF', label: 'Décoller', color: 'bg-green-500', icon: 'rocket', action: (d) => ({ ...d, isFlying: true, altitude: 40 }) }, // Décollage fixe à 40
-            UP: { id: 'UP', label: 'Monter', color: 'bg-cyan-500', icon: 'chevrons-up', action: (d) => ({ ...d, altitude: Math.min(d.altitude + 40, 160) }) },
-            DOWN: { id: 'DOWN', label: 'Descendre', color: 'bg-cyan-600', icon: 'chevrons-down', action: (d) => ({ ...d, altitude: Math.max(d.altitude - 40, 20) }) }, // Ne peut pas atterrir avec ce bouton
+            TAKEOFF: { id: 'TAKEOFF', label: 'Décoller', color: 'bg-green-500', icon: 'rocket', action: (d) => ({ ...d, isFlying: true, altitude: 50 }) }, 
+            UP: { id: 'UP', label: 'Monter', color: 'bg-cyan-500', icon: 'chevrons-up', action: (d) => ({ ...d, altitude: Math.min(d.altitude + 25, 100) }) },
+            DOWN: { id: 'DOWN', label: 'Descendre', color: 'bg-cyan-600', icon: 'chevrons-down', action: (d) => ({ ...d, altitude: Math.max(d.altitude - 25, 25) }) }, 
             FORWARD: { id: 'FORWARD', label: 'Avancer', color: 'bg-blue-500', icon: 'arrow-up', action: (d) => {
                 const step = GRID_CELL; 
                 const rad = (d.rotation * Math.PI) / 180;
@@ -215,7 +264,7 @@
             drone: { x: 0, y: 0, rotation: 0, isFlying: false, altitude: 0 },
             path: [],
             target: { x: 0, y: 0, altitude: 0 },
-            obstacles: [] // Array of {gx, gy, x, y, h}
+            obstacles: [] // Array of {gx, gy, x, y, h, bottom}
         };
 
         window.onload = () => {
@@ -228,7 +277,7 @@
         function buildLevelGrid() {
             const grid = document.getElementById('level-grid');
             grid.innerHTML = '';
-            for (let i = 1; i <= 15; i++) {
+            for (let i = 1; i <= 20; i++) {
                 const btn = document.createElement('button');
                 btn.className = "bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-700 font-bold py-3 px-2 rounded-xl shadow-sm border-2 border-slate-200 hover:border-indigo-400 transition-all active:scale-95 text-lg";
                 btn.innerText = i;
@@ -241,13 +290,12 @@
             const desk = document.getElementById('desktop-tools');
             const mob = document.getElementById('mobile-tools');
             Object.values(BLOCK_TYPES).forEach(type => {
-                // Desktop
                 const btn = document.createElement('button');
                 btn.className = `${type.color} text-white font-bold py-3 px-4 rounded-xl shadow-lg transform active:scale-95 transition-all flex items-center gap-2 w-full mb-3 border-b-4 border-black/20 hover:brightness-110`;
                 btn.innerHTML = `<i data-lucide="${type.icon}" class="w-5 h-5"></i><span>${type.label}</span>`;
                 btn.onclick = () => addBlock(type.id);
                 desk.appendChild(btn);
-                // Mobile
+                
                 const btnMob = document.createElement('button');
                 btnMob.className = `${type.color} text-white p-3 rounded-xl shadow active:scale-95 shrink-0 flex flex-col items-center gap-1 w-16`;
                 btnMob.innerHTML = `<i data-lucide="${type.icon}" class="w-5 h-5"></i><span class="text-[10px] font-bold truncate w-full text-center">${type.label}</span>`;
@@ -272,7 +320,7 @@
             state.levelNumber = num;
             let lvlData;
 
-            if (num <= 15) {
+            if (num <= 20) {
                 lvlData = PREDEFINED_LEVELS.find(l => l.id === num);
             } else {
                 lvlData = generateRandomLevel(num);
@@ -290,7 +338,8 @@
             state.obstacles = lvlData.obstacles.map(o => ({ 
                 gx: o[0], gy: o[1], 
                 x: o[0]*GRID_CELL+GRID_OFFSET, y: o[1]*GRID_CELL+GRID_OFFSET,
-                h: o[2] || 60 
+                h: o[2] || 75,
+                bottom: o[3] || 0
             }));
             
             state.drone = { x: sx, y: sy, rotation: lvlData.start[2], isFlying: false, altitude: 0 };
@@ -302,14 +351,14 @@
             state.program = [];
 
             // UI Updates
-            document.getElementById('level-indicator').innerText = num > 15 ? "∞" : num;
+            document.getElementById('level-indicator').innerText = num > 20 ? "∞" : num;
             document.getElementById('modal-success').classList.add('hidden');
             
             updateUI();
             updateProgramUI();
             setViewMode('TOP');
             
-            const txt = num > 15 ? "Mode Aléatoire !" : `Niveau ${num}`;
+            const txt = num > 20 ? "Mode Aléatoire !" : `Niveau ${num}`;
             showMessage(`${txt} - ${lvlData.hint}`, 'info');
         }
 
@@ -331,24 +380,24 @@
                 start = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX), Math.floor(Math.random()*4)*90];
                 
                 do {
-                    target = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX), Math.floor(Math.random()*3)*40]; // Alt 0, 40 ou 80
+                    target = [Math.floor(Math.random()*MAX), Math.floor(Math.random()*MAX), Math.floor(Math.random()*5)*25]; // 0, 25, 50, 75, 100
                 } while (Math.abs(target[0]-start[0]) + Math.abs(target[1]-start[1]) < 3);
 
-                const obsCount = 5 + Math.floor(Math.random() * 8);
+                const obsCount = 6 + Math.floor(Math.random() * 8);
                 for(let i=0; i<obsCount; i++) {
                     const ox = Math.floor(Math.random()*MAX);
                     const oy = Math.floor(Math.random()*MAX);
-                    const oh = 40 + Math.floor(Math.random()*3)*40; // Hauteurs 40, 80, 120
+                    const oh = [75, 100, 150][Math.floor(Math.random()*3)]; 
+                    const obottom = Math.random() > 0.6 ? 50 : 0; 
                     
                     if ((ox !== start[0] || oy !== start[1]) && 
                         (ox !== target[0] || oy !== target[1]) &&
                         !obstacles.some(o => o[0]===ox && o[1]===oy)) {
-                        obstacles.push([ox, oy, oh]);
+                        obstacles.push([ox, oy, Math.max(oh, obottom + 50), obottom]);
                     }
                 }
                 
-                // Simplified validation (just checking if 2D path exists, 3D is mostly passable with UP)
-                isValid = checkPathExists(start, target, obstacles.filter(o => o[2] > 100), MAX); // Only pillars block the 3D path completely
+                isValid = checkPathExists(start, target, obstacles.filter(o => o[2] > 100 && o[3] === 0), MAX);
             }
 
             return {
@@ -356,7 +405,7 @@
                 start: start,
                 target: target,
                 obstacles: obstacles,
-                hint: "Généré aléatoirement ! Analyse le relief."
+                hint: "Généré aléatoirement ! Analyse bien le relief et les ponts."
             };
         }
 
@@ -437,7 +486,7 @@
 
         async function runProgram() {
             if (state.program.length === 0) {
-                showMessage("Ajoute des blocs d'abord !", 'error');
+                showMessage("Ajoute des blocs d'abord !", 'info');
                 return;
             }
             
@@ -456,7 +505,7 @@
                     const blockType = BLOCK_TYPES[state.program[i].type];
 
                     if (!currentDrone.isFlying && blockType.id !== 'TAKEOFF') {
-                        showMessage("ERREUR: Décolle d'abord !", 'error');
+                        showMessage("ACCIDENT ! Le drone n'a pas décollé !", 'error');
                         state.isPlaying = false;
                         updateUI();
                         return;
@@ -467,32 +516,47 @@
                     // Collision Murs Extérieurs
                     if (nextDrone.x < 0 || nextDrone.x > CANVAS_SIZE || nextDrone.y < 0 || nextDrone.y > CANVAS_SIZE) {
                          await animateDrone(currentDrone, nextDrone);
-                         showMessage("Alerte ! Tu sors de la zone !", 'error');
+                         showMessage("ACCIDENT ! Tu sors de la zone !", 'error');
                          state.isPlaying = false;
                          updateUI();
                          return;
                     }
 
-                    // Collision Obstacles 3D
+                    // Collision Obstacles 3D Complexes
                     const ngx = Math.floor(nextDrone.x / GRID_CELL);
                     const ngy = Math.floor(nextDrone.y / GRID_CELL);
-                    const hitObstacle = state.obstacles.find(o => o.gx === ngx && o.gy === ngy);
+                    const hitObstacles = state.obstacles.filter(o => o.gx === ngx && o.gy === ngy);
                     
-                    // Crash si on est trop bas pour survoler l'obstacle
-                    if (hitObstacle && nextDrone.altitude < hitObstacle.h + 10) {
-                         await animateDrone(currentDrone, nextDrone); 
-                         state.drone = nextDrone; 
-                         showMessage(`CRASH ! L'obstacle fait ${hitObstacle.h}m de haut.`, 'error');
-                         state.isPlaying = false;
-                         updateUI();
-                         return;
+                    for (let obs of hitObstacles) {
+                        const droneBottom = nextDrone.altitude;
+                        const droneTop = nextDrone.altitude + 15; // Drone occupe ~15cm de hauteur
+
+                        // Collision logique
+                        if (droneTop > obs.bottom && droneBottom < obs.h) {
+                            await animateDrone(currentDrone, nextDrone); 
+                            state.drone = nextDrone; 
+                            
+                            let msg = "ACCIDENT !";
+                            if (obs.bottom > 0 && droneTop > obs.bottom && droneBottom <= obs.bottom) {
+                                msg = `ACCIDENT ! Collision sous le pont (${obs.bottom}cm).`;
+                            } else if (droneBottom < obs.h && droneTop >= obs.h) {
+                                msg = `ACCIDENT ! Ce mur fait ${obs.h}cm, tu voles trop bas.`;
+                            } else {
+                                msg = `ACCIDENT ! Collision avec le mur.`;
+                            }
+
+                            showMessage(msg, 'error');
+                            state.isPlaying = false;
+                            updateUI();
+                            return;
+                        }
                     }
-                    
-                    // Crash si on Atterit sur un obstacle
-                    if (hitObstacle && nextDrone.altitude === 0) {
+
+                    // Crash si on Atterrit sur un obstacle
+                    if (hitObstacles.length > 0 && nextDrone.altitude === 0) {
                          await animateDrone(currentDrone, nextDrone); 
                          state.drone = nextDrone; 
-                         showMessage("Tu ne peux pas atterrir sur un obstacle !", 'error');
+                         showMessage("ACCIDENT ! Atterrissage sur un obstacle !", 'error');
                          state.isPlaying = false;
                          updateUI();
                          return;
@@ -551,14 +615,12 @@
 
             if (dist < 25) {
                 if (state.target.altitude === 0) {
-                    // Cible au sol, il faut atterrir
                     if (!finalDrone.isFlying || finalDrone.altitude < 10) {
                         winLevel();
                     } else {
-                        showMessage("Presque ! Il faut atterrir sur la cible.", 'warning');
+                        showMessage("Presque ! Il faut atterrir sur la cible au sol.", 'warning');
                     }
                 } else {
-                    // Cible en l'air, il faut être à la bonne hauteur (et voler)
                     if (altDist < 15 && finalDrone.isFlying) {
                         winLevel();
                     } else if (finalDrone.altitude < state.target.altitude) {
@@ -634,9 +696,15 @@
             const box = document.getElementById('message-box');
             const cont = document.getElementById('message-container');
             box.innerText = text;
-            if (type === 'error') box.className = "inline-block px-4 py-2 rounded-xl text-sm font-bold shadow-lg border-2 bg-red-50 border-red-100 text-red-600 animate-shake";
-            else if (type === 'success') box.className = "inline-block px-4 py-2 rounded-xl text-sm font-bold shadow-lg border-2 bg-green-50 border-green-100 text-green-600 scale-110";
-            else box.className = "inline-block px-4 py-2 rounded-xl text-sm font-bold shadow-lg border-2 bg-white border-blue-100 text-blue-600";
+            if (type === 'error') {
+                box.className = "inline-block px-6 py-3 rounded-xl text-lg font-black shadow-2xl border-4 bg-red-600 border-red-800 text-white animate-shake uppercase";
+            }
+            else if (type === 'success') {
+                box.className = "inline-block px-4 py-2 rounded-xl text-sm font-bold shadow-lg border-2 bg-green-50 border-green-100 text-green-600 scale-110";
+            }
+            else {
+                box.className = "inline-block px-4 py-2 rounded-xl text-sm font-bold shadow-lg border-2 bg-white border-blue-100 text-blue-600";
+            }
             cont.classList.remove('translate-y-4', 'opacity-0');
             cont.classList.add('translate-y-0', 'opacity-100');
         }
@@ -648,7 +716,61 @@
             ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
             if (state.viewMode === 'TOP') drawTop(ctx);
             else drawIso(ctx); 
+            
+            // Mise à jour de l'indicateur d'altitude en temps réel
+            const altElement = document.getElementById('alt-indicator');
+            if (altElement) altElement.innerText = Math.round(state.drone.altitude) + "cm";
+            
             requestAnimationFrame(loop);
+        }
+
+        // --- DESSIN 3D ISO HELPER ---
+        function toIso(x, y, z) {
+            const originX = 200; const originY = 80; 
+            const isoW = 0.8; const isoH = 0.4;    
+            return { x: (x - y) * isoW + originX, y: (x + y) * isoH + originY - z };
+        }
+
+        function drawIsoCube(ctx, cx, cy, zBottom, zTop, colorTop, colorLeft, colorRight) {
+            const r = 22; 
+            const n_bot = toIso(cx - r, cy - r, zBottom); const s_bot = toIso(cx + r, cy + r, zBottom);
+            const e_bot = toIso(cx + r, cy - r, zBottom); const w_bot = toIso(cx - r, cy + r, zBottom);
+            
+            const n_top = toIso(cx - r, cy - r, zTop); const s_top = toIso(cx + r, cy + r, zTop);
+            const e_top = toIso(cx + r, cy - r, zTop); const w_top = toIso(cx - r, cy + r, zTop);
+
+            ctx.fillStyle = colorLeft;
+            ctx.beginPath(); ctx.moveTo(w_bot.x, w_bot.y); ctx.lineTo(s_bot.x, s_bot.y); ctx.lineTo(s_top.x, s_top.y); ctx.lineTo(w_top.x, w_top.y); ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1; ctx.stroke();
+
+            ctx.fillStyle = colorRight;
+            ctx.beginPath(); ctx.moveTo(s_bot.x, s_bot.y); ctx.lineTo(e_bot.x, e_bot.y); ctx.lineTo(e_top.x, e_top.y); ctx.lineTo(s_top.x, s_top.y); ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = colorTop;
+            ctx.beginPath(); ctx.moveTo(n_top.x, n_top.y); ctx.lineTo(e_top.x, e_top.y); ctx.lineTo(s_top.x, s_top.y); ctx.lineTo(w_top.x, w_top.y); ctx.fill();
+            ctx.stroke();
+        }
+
+        // Bulle d'indication d'altitude
+        function drawAltitudeBadge(ctx, x, y, alt) {
+            const text = Math.round(alt) + "cm";
+            ctx.font = "bold 10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const w = ctx.measureText(text).width + 12;
+            const h = 18;
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(x - w/2, y - h/2, w, h, 6);
+            ctx.fill();
+            ctx.strokeStyle = '#0ea5e9';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillText(text, x, y + 1);
         }
 
         function drawDrone2D(ctx, x, y, rot, alt) {
@@ -678,13 +800,27 @@
                 ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(CANVAS_SIZE,i); ctx.stroke();
             }
             
-            ctx.fillStyle = '#94a3b8'; 
             state.obstacles.forEach(o => {
-                ctx.beginPath(); ctx.roundRect(o.x - 20, o.y - 20, 40, 40, 4); ctx.fill();
-                ctx.fillStyle = '#64748b'; ctx.beginPath(); ctx.arc(o.x-5, o.y-5, 5, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = 'white'; ctx.font = "10px sans-serif"; ctx.textAlign="center";
-                ctx.fillText(o.h + "m", o.x, o.y+15);
-                ctx.fillStyle = '#94a3b8';
+                if (o.bottom > 0) {
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.3)'; 
+                    ctx.strokeStyle = '#0284c7'; 
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath(); ctx.roundRect(o.x - 22, o.y - 22, 44, 44, 4); ctx.fill(); ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#0284c7'; ctx.font = "bold 10px sans-serif"; ctx.textAlign="center";
+                    ctx.fillText(`PONT`, o.x, o.y - 2);
+                    ctx.fillText(`<${o.bottom}cm`, o.x, o.y + 10);
+                } else {
+                    ctx.fillStyle = '#475569'; 
+                    ctx.beginPath(); ctx.roundRect(o.x - 22, o.y - 22, 44, 44, 4); ctx.fill();
+                    ctx.fillStyle = '#334155'; 
+                    ctx.beginPath(); ctx.roundRect(o.x - 16, o.y - 16, 32, 32, 2); ctx.fill();
+
+                    ctx.fillStyle = 'white'; ctx.font = "bold 11px sans-serif"; ctx.textAlign="center";
+                    ctx.fillText(o.h + "cm", o.x, o.y+4);
+                }
             });
 
             ctx.save(); ctx.translate(state.target.x, state.target.y);
@@ -695,8 +831,8 @@
             ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(0,0,18 + Math.sin(Date.now()/200)*2, 0, Math.PI*2); ctx.stroke();
             if(state.target.altitude > 0) {
-                ctx.fillStyle = 'black'; ctx.font = "10px sans-serif"; ctx.textAlign="center";
-                ctx.fillText(state.target.altitude + "m", 0, 4);
+                ctx.fillStyle = 'black'; ctx.font = "bold 10px sans-serif"; ctx.textAlign="center";
+                ctx.fillText(state.target.altitude + "cm", 0, 4);
             }
             ctx.restore();
 
@@ -717,13 +853,12 @@
 
             const viewY = state.drone.y - (state.drone.altitude * 0.5);
             drawDrone2D(ctx, state.drone.x, viewY, state.drone.rotation, state.drone.altitude);
+            
+            // Indicateur d'altitude au-dessus du drone 2D
+            drawAltitudeBadge(ctx, state.drone.x, viewY - 30, state.drone.altitude);
         }
 
         function drawIso(ctx) {
-            const originX = 200; const originY = 80; // Descendu un peu pour voir le ciel 
-            const isoW = 0.8; const isoH = 0.4;    
-            const toIso = (x, y, z) => ({ x: (x - y) * isoW + originX, y: (x + y) * isoH + originY - z });
-
             ctx.lineWidth = 1; ctx.strokeStyle = '#cbd5e1';
             for(let x=0; x<=CANVAS_SIZE; x+=GRID_CELL) {
                 const p1 = toIso(x, 0, 0); const p2 = toIso(x, CANVAS_SIZE, 0);
@@ -734,40 +869,6 @@
                 ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
             }
 
-            // Trier les obstacles par "profondeur" Y pour qu'ils s'affichent bien en 3D
-            const sortedObstacles = [...state.obstacles].sort((a,b) => (a.x+a.y) - (b.x+b.y));
-
-            sortedObstacles.forEach(o => {
-                const h = o.h;
-                const base = toIso(o.x, o.y, 0); const top = toIso(o.x, o.y, h);
-                ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.ellipse(base.x, base.y, 15, 8, 0, 0, Math.PI*2); ctx.fill();
-                
-                // Coloration selon hauteur
-                ctx.fillStyle = h > 100 ? '#475569' : '#64748b'; 
-                ctx.beginPath();
-                ctx.moveTo(base.x-10, base.y); ctx.lineTo(base.x+10, base.y); ctx.lineTo(top.x+10, top.y); ctx.lineTo(top.x-10, top.y); ctx.fill();
-                
-                ctx.fillStyle = h > 100 ? '#64748b' : '#94a3b8'; 
-                ctx.beginPath(); ctx.ellipse(top.x, top.y, 12, 6, 0, 0, Math.PI*2); ctx.fill();
-            });
-
-            // Target
-            const tAlt = state.target.altitude;
-            const tPos = toIso(state.target.x, state.target.y, tAlt + (tAlt > 0 ? 5 + Math.sin(Date.now()/300)*5 : 0));
-            const tShadow = toIso(state.target.x, state.target.y, 0);
-            
-            ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.ellipse(tShadow.x, tShadow.y, 10, 5, 0, 0, Math.PI*2); ctx.fill();
-            
-            if (tAlt > 0) {
-                // Ligne pointillée si l'étoile vole
-                ctx.strokeStyle = '#fcd34d'; ctx.setLineDash([2,2]); ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.moveTo(tShadow.x, tShadow.y); ctx.lineTo(tPos.x, tPos.y); ctx.stroke(); ctx.setLineDash([]);
-            }
-
-            ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 8, 0, Math.PI*2); ctx.fill();
-            ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 12, 0, Math.PI*2); ctx.stroke();
-
-            // Trace path
             if(state.path.length > 1) {
                 ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
                 ctx.beginPath();
@@ -781,27 +882,89 @@
                 ctx.lineTo(currBase.x, currBase.y); ctx.stroke(); ctx.globalAlpha = 1.0;
             }
 
-            // Drone
-            const dX = state.drone.x; const dY = state.drone.y; const dZ = state.drone.altitude;
-            const dIso = toIso(dX, dY, dZ); const dShadow = toIso(dX, dY, 0);
+            const renderQueue = [];
 
-            if(dZ > 0) {
-                ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
-                ctx.beginPath(); ctx.moveTo(dShadow.x, dShadow.y); ctx.lineTo(dIso.x, dIso.y); ctx.stroke(); ctx.setLineDash([]);
-            }
+            state.obstacles.forEach(o => {
+                renderQueue.push({ type: 'obs', x: o.x, y: o.y, z: o.bottom, data: o, sortKey: o.x + o.y });
+            });
 
-            ctx.fillStyle = 'rgba(0,0,0,0.15)';
-            const sRadius = Math.max(5, 15 - dZ/20);
-            ctx.beginPath(); ctx.ellipse(dShadow.x, dShadow.y, sRadius, sRadius*0.5, 0, 0, Math.PI*2); ctx.fill();
+            renderQueue.push({ type: 'target', x: state.target.x, y: state.target.y, z: state.target.altitude, data: state.target, sortKey: state.target.x + state.target.y });
+            renderQueue.push({ type: 'drone', x: state.drone.x, y: state.drone.y, z: state.drone.altitude, data: state.drone, sortKey: state.drone.x + state.drone.y });
 
-            ctx.save(); ctx.translate(dIso.x, dIso.y);
-            ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#bfdbfe';
-            const propOffsets = [{x:-12, y:-6}, {x:12, y:-6}, {x:-12, y:6}, {x:12, y:6}];
-            const spin = state.drone.isFlying ? Math.sin(Date.now())*2 : 0;
-            propOffsets.forEach(po => { ctx.beginPath(); ctx.ellipse(po.x, po.y, 6+spin, 3, 0, 0, Math.PI*2); ctx.fill(); });
-            ctx.fillStyle = state.drone.isFlying ? '#10b981' : '#ef4444'; ctx.beginPath(); ctx.arc(0, -2, 3, 0, Math.PI*2); ctx.fill();
-            ctx.restore();
+            renderQueue.sort((a, b) => {
+                const depthDiff = a.sortKey - b.sortKey;
+                if (Math.abs(depthDiff) > 10) return depthDiff; 
+                return a.z - b.z; 
+            });
+
+            renderQueue.forEach(item => {
+                if (item.type === 'obs') {
+                    const o = item.data;
+                    const h = o.h;
+                    const bottom = o.bottom;
+                    const groundShadow = toIso(o.x, o.y, 0);
+
+                    if (bottom === 0) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.ellipse(groundShadow.x, groundShadow.y, 20, 10, 0, 0, Math.PI*2); ctx.fill();
+                        drawIsoCube(ctx, o.x, o.y, 0, h, '#94a3b8', '#475569', '#64748b');
+                    } else {
+                        ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.ellipse(groundShadow.x, groundShadow.y, 18, 9, 0, 0, Math.PI*2); ctx.fill();
+                        
+                        ctx.strokeStyle = '#475569'; ctx.lineWidth = 3;
+                        const r = 20;
+                        const pCorners = [[-r,-r],[r,r],[r,-r],[-r,r]];
+                        pCorners.forEach(pc => {
+                            const pBase = toIso(o.x + pc[0], o.y + pc[1], 0);
+                            const pTop = toIso(o.x + pc[0], o.y + pc[1], bottom);
+                            ctx.beginPath(); ctx.moveTo(pBase.x, pBase.y); ctx.lineTo(pTop.x, pTop.y); ctx.stroke();
+                        });
+
+                        drawIsoCube(ctx, o.x, o.y, bottom, h, '#7dd3fc', '#0284c7', '#0ea5e9');
+                    }
+                } 
+                else if (item.type === 'target') {
+                    const t = item.data;
+                    const tAlt = t.altitude;
+                    const tPos = toIso(t.x, t.y, tAlt + (tAlt > 0 ? 5 + Math.sin(Date.now()/300)*5 : 0));
+                    const tShadow = toIso(t.x, t.y, 0);
+                    
+                    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.beginPath(); ctx.ellipse(tShadow.x, tShadow.y, 10, 5, 0, 0, Math.PI*2); ctx.fill();
+                    
+                    if (tAlt > 0) {
+                        ctx.strokeStyle = '#fcd34d'; ctx.setLineDash([2,2]); ctx.lineWidth = 1;
+                        ctx.beginPath(); ctx.moveTo(tShadow.x, tShadow.y); ctx.lineTo(tPos.x, tPos.y); ctx.stroke(); ctx.setLineDash([]);
+                    }
+
+                    ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 8, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(tPos.x, tPos.y, 12, 0, Math.PI*2); ctx.stroke();
+                }
+                else if (item.type === 'drone') {
+                    const d = item.data;
+                    const dIso = toIso(d.x, d.y, d.altitude); 
+                    const dShadow = toIso(d.x, d.y, 0);
+
+                    if(d.altitude > 0) {
+                        ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
+                        ctx.beginPath(); ctx.moveTo(dShadow.x, dShadow.y); ctx.lineTo(dIso.x, dIso.y); ctx.stroke(); ctx.setLineDash([]);
+                    }
+
+                    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                    const sRadius = Math.max(5, 15 - d.altitude/20);
+                    ctx.beginPath(); ctx.ellipse(dShadow.x, dShadow.y, sRadius, sRadius*0.5, 0, 0, Math.PI*2); ctx.fill();
+
+                    ctx.save(); ctx.translate(dIso.x, dIso.y);
+                    ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#bfdbfe';
+                    const propOffsets = [{x:-12, y:-6}, {x:12, y:-6}, {x:-12, y:6}, {x:12, y:6}];
+                    const spin = d.isFlying ? Math.sin(Date.now())*2 : 0;
+                    propOffsets.forEach(po => { ctx.beginPath(); ctx.ellipse(po.x, po.y, 6+spin, 3, 0, 0, Math.PI*2); ctx.fill(); });
+                    ctx.fillStyle = d.isFlying ? '#10b981' : '#ef4444'; ctx.beginPath(); ctx.arc(0, -2, 3, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
+                    
+                    // Indicateur d'altitude au-dessus du drone 3D
+                    drawAltitudeBadge(ctx, dIso.x, dIso.y - 30, d.altitude);
+                }
+            });
         }
 
     </script>
