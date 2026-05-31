@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Programme ton Drone !</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 50%, #fef9c3 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Rounded, system-ui, sans-serif;
+        }
+
+        /* ── Blocs palette ── */
+        .bloc {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: 15px;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.25);
+            color: white;
+            width: 100%;
+            text-align: left;
+            user-select: none;
+        }
+        .bloc:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+        }
+        .bloc .emoji { font-size: 22px; line-height: 1; }
+
+        /* ── Blocs dans le programme ── */
+        .bloc-prog {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 14px;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 14px;
+            color: white;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            position: relative;
+            transition: transform 0.15s, box-shadow 0.15s;
+            animation: slideIn 0.2s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Bloc actif en cours d'exécution */
+        .bloc-prog.actif {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 3px white, 0 0 0 6px #f59e0b, 0 6px 0 rgba(0,0,0,0.2);
+            animation: pulse-bloc 0.6s ease-in-out infinite alternate;
+        }
+        @keyframes pulse-bloc {
+            from { box-shadow: 0 0 0 3px white, 0 0 0 6px #f59e0b, 0 6px 0 rgba(0,0,0,0.2); }
+            to   { box-shadow: 0 0 0 3px white, 0 0 0 9px #f59e0b, 0 6px 0 rgba(0,0,0,0.2); }
+        }
+
+        .bloc-prog.termine {
+            opacity: 0.5;
+            filter: grayscale(0.3);
+        }
+
+        /* Bouton supprimer sur le bloc programme */
+        .btn-del {
+            margin-left: auto;
+            background: rgba(0,0,0,0.2);
+            border: none;
+            color: white;
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        .btn-del:hover { background: rgba(0,0,0,0.4); }
+
+        /* Numéro d'étape */
+        .num-etape {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 2px 7px;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        /* ── Bouton LANCER ── */
+        #btn-lancer {
+            background: linear-gradient(160deg, #16a34a, #15803d);
+            box-shadow: 0 7px 0 #14532d, 0 10px 20px rgba(22,163,74,0.3);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        #btn-lancer:not(:disabled):active {
+            transform: translateY(6px);
+            box-shadow: 0 1px 0 #14532d;
+        }
+        #btn-lancer:not(:disabled):hover { filter: brightness(1.1); }
+        #btn-lancer:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.4); }
+
+        /* ── Bouton EFFACER ── */
+        #btn-effacer {
+            background: linear-gradient(160deg, #dc2626, #b91c1c);
+            box-shadow: 0 5px 0 #7f1d1d;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        #btn-effacer:active { transform: translateY(4px); box-shadow: 0 1px 0 #7f1d1d; }
+        #btn-effacer:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* ── Bouton CONNECTER ── */
+        #btn-connect {
+            box-shadow: 0 4px 0 #4c1d95;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        #btn-connect:active { transform: translateY(3px); box-shadow: 0 1px 0 #4c1d95; }
+
+        /* ── Zone programme vide ── */
+        #zone-vide {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #94a3b8;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* ── LED ── */
+        .led {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .led-off    { background: #cbd5e1; }
+        .led-vert   { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .led-orange { background: #f97316; box-shadow: 0 0 8px #f97316; animation: cligno 0.8s infinite; }
+        @keyframes cligno { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+        /* ── Barre de progression ── */
+        #barre-prog {
+            transition: width 0.5s ease;
+        }
+
+        /* ── Confettis de victoire ── */
+        .confetti {
+            position: fixed;
+            top: -10px;
+            border-radius: 2px;
+            animation: tomber linear forwards;
+            pointer-events: none;
+        }
+        @keyframes tomber {
+            to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="p-3 md:p-5">
+
+    <!-- ══ TITRE ════════════════════════════════════════ -->
+    <div class="flex items-center justify-between mb-4 bg-white/70 backdrop-blur rounded-2xl px-4 py-3 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="text-4xl">🚁</div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-black text-slate-800 leading-none">Programme ton Drone !</h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <div id="led" class="led led-off"></div>
+                    <span id="txt-statut" class="text-sm font-semibold text-slate-500">Non connecté</span>
+                </div>
+            </div>
+        </div>
+        <button id="btn-connect" onclick="connecter()"
+            class="bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2">
+            <i data-lucide="bluetooth" class="w-4 h-4"></i>
+            <span id="lbl-connect">Connecter</span>
+        </button>
+    </div>
+
+    <!-- ══ CORPS PRINCIPAL ══════════════════════════════ -->
+    <div class="flex gap-4 h-[calc(100vh-160px)]">
+
+        <!-- ── COLONNE 1 : Palette de blocs ── -->
+        <div class="w-52 md:w-60 shrink-0 flex flex-col gap-2 overflow-y-auto">
+            <div class="text-center font-black text-slate-500 text-xs uppercase tracking-widest mb-1">
+                Clique pour ajouter
+            </div>
+
+            <button class="bloc" style="background:#16a34a; box-shadow:0 5px 0 #14532d"
+                onclick="ajouterBloc('decoller')">
+                <span class="emoji">🚀</span> Décoller
+            </button>
+
+            <button class="bloc" style="background:#2563eb; box-shadow:0 5px 0 #1e3a8a"
+                onclick="ajouterBloc('avancer')">
+                <span class="emoji">⬆️</span> Avancer 30cm
+            </button>
+
+            <button class="bloc" style="background:#3b82f6; box-shadow:0 5px 0 #1d4ed8"
+                onclick="ajouterBloc('reculer')">
+                <span class="emoji">⬇️</span> Reculer 30cm
+            </button>
+
+            <button class="bloc" style="background:#f59e0b; box-shadow:0 5px 0 #b45309"
+                onclick="ajouterBloc('tourner_gauche')">
+                <span class="emoji">↩️</span> Tourner Gauche
+            </button>
+
+            <button class="bloc" style="background:#f97316; box-shadow:0 5px 0 #c2410c"
+                onclick="ajouterBloc('tourner_droite')">
+                <span class="emoji">↪️</span> Tourner Droite
+            </button>
+
+            <button class="bloc" style="background:#06b6d4; box-shadow:0 5px 0 #0e7490"
+                onclick="ajouterBloc('monter')">
+                <span class="emoji">☁️</span> Monter 30cm
+            </button>
+
+            <button class="bloc" style="background:#0891b2; box-shadow:0 5px 0 #155e75"
+                onclick="ajouterBloc('descendre')">
+                <span class="emoji">🌊</span> Descendre 30cm
+            </button>
+
+            <button class="bloc" style="background:#dc2626; box-shadow:0 5px 0 #7f1d1d"
+                onclick="ajouterBloc('atterrir')">
+                <span class="emoji">🏁</span> Atterrir
+            </button>
+        </div>
+
+        <!-- ── COLONNE 2 : Programme ── -->
+        <div class="flex-1 flex flex-col bg-white/60 backdrop-blur rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <h2 class="font-black text-slate-700 text-sm uppercase tracking-wider">
+                    Mon Programme
+                    <span id="nb-blocs" class="ml-2 bg-slate-200 text-slate-600 rounded-full px-2 py-0.5 text-xs font-bold">0 blocs</span>
+                </h2>
+                <!-- Barre de progression -->
+                <div id="zone-progression" class="hidden flex-1 mx-4 bg-slate-200 rounded-full h-3 overflow-hidden">
+                    <div id="barre-prog" class="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Liste des blocs -->
+            <div id="programme" class="flex-1 overflow-y-auto p-4 space-y-2">
+                <div id="zone-vide">
+                    <div class="text-6xl mb-4">👈</div>
+                    <p class="font-black text-lg text-slate-400">Clique sur les blocs</p>
+                    <p class="text-slate-400 text-sm mt-1">pour créer ton programme !</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── COLONNE 3 : Actions ── -->
+        <div class="w-44 md:w-52 shrink-0 flex flex-col gap-3">
+
+            <!-- Message -->
+            <div id="msg-box" class="bg-white/70 rounded-2xl p-3 text-center min-h-[60px] flex items-center justify-center">
+                <p id="msg-txt" class="text-sm font-bold text-slate-500">Construis ton programme !</p>
+            </div>
+
+            <!-- LANCER -->
+            <button id="btn-lancer" onclick="lancerProgramme()" disabled
+                class="text-white font-black text-xl py-5 rounded-2xl flex flex-col items-center gap-1">
+                <span class="text-3xl">▶</span>
+                LANCER !
+            </button>
+
+            <!-- EFFACER -->
+            <button id="btn-effacer" onclick="effacerProgramme()" disabled
+                class="text-white font-bold text-base py-3 rounded-xl flex items-center justify-center gap-2">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Tout effacer
+            </button>
+
+            <!-- Légende -->
+            <div class="bg-white/60 rounded-2xl p-3 mt-auto">
+                <p class="font-black text-slate-600 text-xs uppercase tracking-wider mb-2">Légende</p>
+                <div class="space-y-1.5 text-xs text-slate-600 font-medium">
+                    <div>🚀 = Décoller</div>
+                    <div>⬆️ = Avancer</div>
+                    <div>⬇️ = Reculer</div>
+                    <div>↩️ = Tourner Gauche</div>
+                    <div>↪️ = Tourner Droite</div>
+                    <div>☁️ = Monter</div>
+                    <div>🌊 = Descendre</div>
+                    <div>🏁 = Atterrir</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ─── Données ──────────────────────────────────────
+        const BLOCS_INFO = {
+            decoller:       { emoji:"🚀", label:"Décoller",         couleur:"#16a34a", ombre:"#14532d" },
+            avancer:        { emoji:"⬆️", label:"Avancer 30cm",     couleur:"#2563eb", ombre:"#1e3a8a" },
+            reculer:        { emoji:"⬇️", label:"Reculer 30cm",     couleur:"#3b82f6", ombre:"#1d4ed8" },
+            tourner_gauche: { emoji:"↩️", label:"Tourner Gauche",   couleur:"#f59e0b", ombre:"#b45309" },
+            tourner_droite: { emoji:"↪️", label:"Tourner Droite",   couleur:"#f97316", ombre:"#c2410c" },
+            monter:         { emoji:"☁️", label:"Monter 30cm",      couleur:"#06b6d4", ombre:"#0e7490" },
+            descendre:      { emoji:"🌊", label:"Descendre 30cm",   couleur:"#0891b2", ombre:"#155e75" },
+            atterrir:       { emoji:"🏁", label:"Atterrir",          couleur:"#dc2626", ombre:"#7f1d1d" },
+        };
+
+        let programme    = [];   // liste des actions
+        let enExecution  = false;
+
+        lucide.createIcons();
+
+        // ─── Programme ────────────────────────────────────
+
+        function ajouterBloc(action) {
+            if (enExecution) return;
+            programme.push(action);
+            rafraichirProgramme();
+            afficherMsg("Bloc ajouté !", "#22c55e");
+        }
+
+        function supprimerBloc(index) {
+            if (enExecution) return;
+            programme.splice(index, 1);
+            rafraichirProgramme();
+        }
+
+        function effacerProgramme() {
+            if (enExecution) return;
+            programme = [];
+            rafraichirProgramme();
+            afficherMsg("Programme effacé", "#94a3b8");
+        }
+
+        function rafraichirProgramme(etapeActive = -1) {
+            const zone    = document.getElementById("programme");
+            const vide    = document.getElementById("zone-vide");
+            const nbBlocs = document.getElementById("nb-blocs");
+            const btnL    = document.getElementById("btn-lancer");
+            const btnE    = document.getElementById("btn-effacer");
+
+            nbBlocs.textContent = programme.length + (programme.length > 1 ? " blocs" : " bloc");
+
+            if (programme.length === 0) {
+                zone.innerHTML = "";
+                zone.appendChild(creerZoneVide());
+                btnL.disabled = true;
+                btnE.disabled = true;
+                return;
+            }
+
+            btnE.disabled = enExecution;
+            btnL.disabled = enExecution;
+
+            zone.innerHTML = "";
+            programme.forEach((action, i) => {
+                const info = BLOCS_INFO[action];
+                const div  = document.createElement("div");
+                div.className = "bloc-prog" + (i === etapeActive ? " actif" : "") + (i < etapeActive ? " termine" : "");
+                div.style.background = info.couleur;
+                div.style.boxShadow  = `0 4px 0 ${info.ombre}`;
+                div.innerHTML = `
+                    <span class="num-etape">${i + 1}</span>
+                    <span style="font-size:20px;line-height:1">${info.emoji}</span>
+                    <span style="flex:1">${info.label}</span>
+                    ${!enExecution ? `<button class="btn-del" onclick="supprimerBloc(${i})">✕</button>` : ""}
+                `;
+                zone.appendChild(div);
+
+                // Scroll automatique vers le bloc actif
+                if (i === etapeActive) {
+                    setTimeout(() => div.scrollIntoView({ behavior:"smooth", block:"center" }), 50);
+                }
+            });
+        }
+
+        function creerZoneVide() {
+            const d = document.createElement("div");
+            d.id = "zone-vide";
+            d.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;text-align:center;pointer-events:none";
+            d.innerHTML = `<div style="font-size:4rem;margin-bottom:1rem">👈</div>
+                           <p style="font-weight:900;font-size:1.125rem">Clique sur les blocs</p>
+                           <p style="font-size:0.875rem;margin-top:0.25rem">pour créer ton programme !</p>`;
+            return d;
+        }
+
+        // ─── Connexion ────────────────────────────────────
+
+        async function connecter() {
+            afficherMsg("Connexion...", "#f97316");
+            try {
+                const r = await fetch("/api/connecter", { method:"POST" });
+                const d = await r.json();
+                majStatut(d);
+                afficherMsg(d.message, d.ok ? "#22c55e" : "#ef4444");
+            } catch {
+                afficherMsg("Serveur introuvable !", "#ef4444");
+            }
+        }
+
+        // ─── Lancer le programme ──────────────────────────
+
+        async function lancerProgramme() {
+            if (enExecution || programme.length === 0) return;
+
+            enExecution = true;
+            document.getElementById("zone-progression").classList.remove("hidden");
+            document.getElementById("btn-lancer").disabled = true;
+            document.getElementById("btn-effacer").disabled = true;
+            rafraichirProgramme();
+            afficherMsg("C'est parti !", "#22c55e");
+
+            try {
+                const r = await fetch("/api/programme", {
+                    method:"POST",
+                    headers:{"Content-Type":"application/json"},
+                    body: JSON.stringify({ actions: programme })
+                });
+                const d = await r.json();
+                if (!d.ok) {
+                    afficherMsg(d.message, "#ef4444");
+                    enExecution = false;
+                    rafraichirProgramme();
+                    return;
+                }
+                // Démarre le polling pour suivre l'avancement
+                pollProgramme();
+            } catch {
+                afficherMsg("Erreur de communication", "#ef4444");
+                enExecution = false;
+                rafraichirProgramme();
+            }
+        }
+
+        async function pollProgramme() {
+            try {
+                const r = await fetch("/api/etat");
+                const d = await r.json();
+                const p = d.programme;
+
+                if (p.en_cours) {
+                    // Mise à jour barre de progression
+                    const pct = p.total > 0 ? Math.round(((p.etape + 1) / p.total) * 100) : 0;
+                    document.getElementById("barre-prog").style.width = pct + "%";
+                    rafraichirProgramme(p.etape);
+                    afficherMsg(p.message || "En cours...", "#f97316");
+                    setTimeout(pollProgramme, 400);
+                } else {
+                    // Terminé
+                    enExecution = false;
+                    document.getElementById("barre-prog").style.width = "100%";
+                    rafraichirProgramme();
+
+                    if (p.succes === true) {
+                        afficherMsg("Bravo ! Programme terminé 🎉", "#22c55e");
+                        lancerConfettis();
+                        setTimeout(() => {
+                            document.getElementById("zone-progression").classList.add("hidden");
+                            document.getElementById("barre-prog").style.width = "0%";
+                        }, 3000);
+                    } else if (p.succes === false) {
+                        afficherMsg(p.message || "Erreur !", "#ef4444");
+                        document.getElementById("zone-progression").classList.add("hidden");
+                        document.getElementById("barre-prog").style.width = "0%";
+                    }
+                }
+            } catch {
+                setTimeout(pollProgramme, 600);
+            }
+        }
+
+        // ─── Statut connexion ─────────────────────────────
+
+        function majStatut(d) {
+            const led  = document.getElementById("led");
+            const txt  = document.getElementById("txt-statut");
+            const lbl  = document.getElementById("lbl-connect");
+            const btnC = document.getElementById("btn-connect");
+
+            if (d.connecte) {
+                led.className = "led led-vert";
+                txt.textContent = "Mambo connecté !";
+                lbl.textContent = "Connecté ✓";
+                btnC.style.background = "#16a34a";
+                btnC.style.boxShadow  = "0 4px 0 #14532d";
+            } else {
+                led.className = "led led-off";
+                txt.textContent = "Non connecté";
+                lbl.textContent = "Connecter";
+                btnC.style.background = "";
+                btnC.style.boxShadow  = "";
+            }
+        }
+
+        function afficherMsg(txt, couleur) {
+            const el = document.getElementById("msg-txt");
+            el.textContent = txt;
+            el.style.color = couleur;
+        }
+
+        // ─── Confettis ────────────────────────────────────
+
+        function lancerConfettis() {
+            const couleurs = ["#f59e0b","#22c55e","#3b82f6","#ec4899","#f97316","#8b5cf6"];
+            for (let i = 0; i < 60; i++) {
+                const c = document.createElement("div");
+                c.className = "confetti";
+                c.style.cssText = `
+                    left: ${Math.random()*100}vw;
+                    width: ${6+Math.random()*8}px;
+                    height: ${8+Math.random()*12}px;
+                    background: ${couleurs[Math.floor(Math.random()*couleurs.length)]};
+                    animation-duration: ${1.5+Math.random()*2}s;
+                    animation-delay: ${Math.random()*0.8}s;
+                `;
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 4000);
+            }
+        }
+
+        // ─── Polling état initial ─────────────────────────
+        async function pollEtat() {
+            try {
+                const r = await fetch("/api/etat");
+                majStatut(await r.json());
+            } catch {}
+        }
+        setInterval(pollEtat, 4000);
+    </script>
+</body>
+</html>
