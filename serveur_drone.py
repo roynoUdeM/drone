@@ -121,7 +121,7 @@ class MamboController:
 
     async def _cmd_ack_async(self, paquet):
         await self.client.write_gatt_char(
-            CHAR_SEND_WITH_ACK, bytearray(paquet), response=True)
+            CHAR_SEND_WITH_ACK, bytearray(paquet), response=False)
 
     async def _fly_async(self, roll, pitch, yaw, vertical, duree):
         fin = time.time() + duree
