@@ -27,7 +27,7 @@ PUISSANCE_TRANSLATION = 30     # % pour avancer / reculer
 DUREE_30CM            = 0.80   # secondes ≈ 30 cm
 
 PUISSANCE_VIRAGE      = 80     # % pour tourner
-DUREE_VIRAGE_90       = 1.20   # secondes ≈ 90°
+DUREE_VIRAGE_90       = 1.05   # secondes ≈ 90°
 
 PUISSANCE_VERTICAL    = 50     # % pour monter / descendre
 DUREE_VERTICAL_30CM   = 0.65   # secondes ≈ 30 cm vertical
