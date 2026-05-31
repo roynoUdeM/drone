@@ -106,6 +106,18 @@ class MamboController:
             except Exception:
                 pass   # certains firmwares n'ont pas toutes les caractéristiques
         await asyncio.sleep(0.5)
+        # Démarrer le keep-alive : envoie un PCMD neutre toutes les 0.5 s
+        # pour éviter que le Mambo coupe la connexion BLE par inactivité
+        asyncio.ensure_future(self._keep_alive())
+
+    async def _keep_alive(self):
+        while self.client and self.client.is_connected:
+            try:
+                pkt = bytearray(_paquet_pcmd(0, 0, 0, 0))
+                await self.client.write_gatt_char(CHAR_SEND_NO_ACK, pkt, response=False)
+            except Exception:
+                break
+            await asyncio.sleep(0.5)
 
     async def _cmd_ack_async(self, paquet):
         await self.client.write_gatt_char(
