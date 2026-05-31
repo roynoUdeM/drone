@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Contrôle Mambo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background: radial-gradient(ellipse at top, #0f1f3d 0%, #0a0f1a 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        /* ── Boutons de contrôle ── */
+        .btn-ctrl {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-weight: 700;
+            border-radius: 18px;
+            cursor: pointer;
+            transition: transform 0.08s, box-shadow 0.08s;
+            user-select: none;
+            border: none;
+            outline: none;
+        }
+        .btn-ctrl:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+        .btn-ctrl:not(:disabled):active {
+            transform: translateY(4px) scale(0.97);
+        }
+
+        /* Direction (bleu) */
+        .btn-dir {
+            width: 88px;
+            height: 88px;
+            background: linear-gradient(160deg, #2563eb, #1d4ed8);
+            box-shadow: 0 6px 0 #1e3a8a, 0 10px 20px rgba(37,99,235,0.25);
+            color: white;
+        }
+        .btn-dir:not(:disabled):active {
+            box-shadow: 0 2px 0 #1e3a8a, 0 4px 10px rgba(37,99,235,0.2);
+        }
+
+        /* Altitude montée (cyan) */
+        .btn-up {
+            width: 82px;
+            height: 82px;
+            background: linear-gradient(160deg, #0891b2, #0e7490);
+            box-shadow: 0 6px 0 #164e63, 0 10px 20px rgba(8,145,178,0.25);
+            color: white;
+        }
+        .btn-up:not(:disabled):active {
+            box-shadow: 0 2px 0 #164e63, 0 4px 10px rgba(8,145,178,0.2);
+        }
+
+        /* Altitude descente (bleu ciel) */
+        .btn-down {
+            width: 82px;
+            height: 82px;
+            background: linear-gradient(160deg, #0284c7, #0369a1);
+            box-shadow: 0 6px 0 #075985, 0 10px 20px rgba(3,105,161,0.25);
+            color: white;
+        }
+        .btn-down:not(:disabled):active {
+            box-shadow: 0 2px 0 #075985;
+        }
+
+        /* Décollage (vert) */
+        .btn-takeoff {
+            background: linear-gradient(160deg, #16a34a, #15803d);
+            box-shadow: 0 6px 0 #14532d, 0 10px 20px rgba(22,163,74,0.3);
+            color: white;
+        }
+        .btn-takeoff:not(:disabled):active {
+            box-shadow: 0 2px 0 #14532d, 0 4px 10px rgba(22,163,74,0.2);
+        }
+        .btn-takeoff:not(:disabled):hover {
+            background: linear-gradient(160deg, #22c55e, #16a34a);
+        }
+
+        /* Atterrissage (rouge) */
+        .btn-land {
+            background: linear-gradient(160deg, #dc2626, #b91c1c);
+            box-shadow: 0 6px 0 #7f1d1d, 0 10px 20px rgba(220,38,38,0.3);
+            color: white;
+        }
+        .btn-land:not(:disabled):active {
+            box-shadow: 0 2px 0 #7f1d1d, 0 4px 10px rgba(220,38,38,0.2);
+        }
+        .btn-land:not(:disabled):hover {
+            background: linear-gradient(160deg, #ef4444, #dc2626);
+        }
+
+        /* Connecter (violet) */
+        .btn-connect {
+            background: linear-gradient(160deg, #7c3aed, #6d28d9);
+            box-shadow: 0 4px 0 #4c1d95, 0 6px 14px rgba(124,58,237,0.35);
+            color: white;
+            transition: all 0.15s;
+        }
+        .btn-connect:active { transform: translateY(3px); box-shadow: 0 1px 0 #4c1d95; }
+        .btn-connect.connected {
+            background: linear-gradient(160deg, #059669, #047857);
+            box-shadow: 0 4px 0 #064e3b, 0 6px 14px rgba(5,150,105,0.35);
+        }
+
+        /* ── Panneaux glass ── */
+        .glass {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+        }
+
+        /* ── LED indicateurs ── */
+        .led {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .led-off   { background:#374151; box-shadow: none; }
+        .led-green { background:#22c55e; box-shadow: 0 0 8px #22c55e; }
+        .led-yellow{ background:#eab308; box-shadow: 0 0 8px #eab308; animation: blink 1s infinite; }
+        .led-red   { background:#ef4444; box-shadow: 0 0 8px #ef4444; animation: blink 0.4s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ── Drone icon propellers ── */
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        .prop { transform-origin: center; }
+        .prop.spinning { animation: spin 0.2s linear infinite; }
+
+        /* ── Message flash ── */
+        .msg-ok   { color: #4ade80; }
+        .msg-err  { color: #f87171; }
+        .msg-warn { color: #facc15; }
+        .msg-info { color: #94a3b8; }
+
+        /* ── Altitude bar ── */
+        #alt-bar-fill {
+            transition: height 0.4s ease;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4 select-none">
+
+    <!-- ══ HEADER ══════════════════════════════════════════ -->
+    <div class="w-full max-w-md mb-4">
+        <div class="glass rounded-2xl px-4 py-3 flex items-center justify-between">
+
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-700 p-2 rounded-xl shadow-inner">
+                    <i data-lucide="radio" class="w-5 h-5 text-blue-200"></i>
+                </div>
+                <div>
+                    <div class="text-white font-bold text-base leading-none">Parrot Mambo</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div id="led-conn" class="led led-off"></div>
+                        <span id="txt-conn" class="text-slate-500 text-xs">Déconnecté</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Altitude -->
+                <div class="text-right">
+                    <div class="text-slate-600 text-[9px] uppercase tracking-widest">Altitude</div>
+                    <div id="alt-header" class="text-cyan-400 font-mono font-bold text-xl leading-none">0 cm</div>
+                </div>
+                <!-- Bouton connexion -->
+                <button id="btn-connect" onclick="connecter()"
+                    class="btn-connect px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
+                    <i data-lucide="bluetooth" class="w-4 h-4"></i>
+                    <span id="lbl-connect">Connecter</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ CONTRÔLEUR PRINCIPAL ══════════════════════════ -->
+    <div class="w-full max-w-md glass rounded-3xl p-5 pb-6">
+
+        <!-- Message -->
+        <div id="msg" class="text-center text-sm font-medium mb-5 h-5 msg-info transition-colors">
+            Appuyez sur Connecter pour démarrer
+        </div>
+
+        <div class="flex items-center gap-4">
+
+            <!-- ── COLONNE GAUCHE : Altitude ── -->
+            <div class="flex flex-col items-center gap-2 shrink-0">
+                <div class="text-slate-600 text-[9px] uppercase tracking-widest">Altitude</div>
+
+                <button id="btn-monter" onclick="cmd('monter')" disabled
+                    class="btn-ctrl btn-up">
+                    <i data-lucide="chevrons-up" class="w-6 h-6"></i>
+                    <span class="text-[10px]">+30 cm</span>
+                </button>
+
+                <!-- Barre d'altitude verticale -->
+                <div class="relative w-8 h-24 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                    <div id="alt-bar-fill"
+                         class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-cyan-600 to-cyan-400 rounded-full"
+                         style="height:0%"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="alt-bar-txt" class="text-[9px] font-mono text-white font-bold leading-none rotate-0">0</span>
+                    </div>
+                </div>
+
+                <button id="btn-descendre" onclick="cmd('descendre')" disabled
+                    class="btn-ctrl btn-down">
+                    <i data-lucide="chevrons-down" class="w-6 h-6"></i>
+                    <span class="text-[10px]">-30 cm</span>
+                </button>
+            </div>
+
+            <!-- ── COLONNE CENTRE : D-Pad ── -->
+            <div class="flex-1 flex flex-col items-center gap-3">
+
+                <!-- Avancer -->
+                <button id="btn-avancer" onclick="cmd('avancer')" disabled
+                    class="btn-ctrl btn-dir">
+                    <i data-lucide="arrow-up" class="w-7 h-7"></i>
+                    <span class="text-[10px]">Avancer</span>
+                </button>
+
+                <!-- Gauche · Drone · Droite -->
+                <div class="flex items-center gap-3">
+                    <button id="btn-tourner_gauche" onclick="cmd('tourner_gauche')" disabled
+                        class="btn-ctrl btn-dir">
+                        <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+                        <span class="text-[10px]">Gauche</span>
+                    </button>
+
+                    <!-- Icône drone centrale -->
+                    <div class="w-14 h-14 flex items-center justify-center">
+                        <svg id="drone-svg" width="52" height="52" viewBox="0 0 52 52">
+                            <!-- Bras -->
+                            <line x1="12" y1="12" x2="20" y2="20" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                            <line x1="40" y1="12" x2="32" y2="20" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                            <line x1="12" y1="40" x2="20" y2="32" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                            <line x1="40" y1="40" x2="32" y2="32" stroke="#334155" stroke-width="3.5" stroke-linecap="round"/>
+                            <!-- Corps -->
+                            <rect x="18" y="18" width="16" height="16" rx="4" fill="#1e3a8a"/>
+                            <rect x="20" y="20" width="12" height="12" rx="3" fill="#1d4ed8"/>
+                            <!-- Hélices -->
+                            <g id="prop-fl" class="prop">
+                                <ellipse cx="12" cy="12" rx="8" ry="3" fill="#2563eb" opacity="0.85"/>
+                            </g>
+                            <g id="prop-fr" class="prop">
+                                <ellipse cx="40" cy="12" rx="8" ry="3" fill="#2563eb" opacity="0.85"/>
+                            </g>
+                            <g id="prop-bl" class="prop">
+                                <ellipse cx="12" cy="40" rx="8" ry="3" fill="#2563eb" opacity="0.85"/>
+                            </g>
+                            <g id="prop-br" class="prop">
+                                <ellipse cx="40" cy="40" rx="8" ry="3" fill="#2563eb" opacity="0.85"/>
+                            </g>
+                            <!-- LED avant -->
+                            <circle id="drone-led" cx="26" cy="20" r="2.5" fill="#374151"/>
+                        </svg>
+                    </div>
+
+                    <button id="btn-tourner_droite" onclick="cmd('tourner_droite')" disabled
+                        class="btn-ctrl btn-dir">
+                        <i data-lucide="rotate-cw" class="w-6 h-6"></i>
+                        <span class="text-[10px]">Droite</span>
+                    </button>
+                </div>
+
+                <!-- Reculer -->
+                <button id="btn-reculer" onclick="cmd('reculer')" disabled
+                    class="btn-ctrl btn-dir">
+                    <i data-lucide="arrow-down" class="w-7 h-7"></i>
+                    <span class="text-[10px]">Reculer</span>
+                </button>
+
+            </div>
+        </div>
+
+        <!-- ── DÉCOLLAGE / ATTERRISSAGE ── -->
+        <div class="grid grid-cols-2 gap-4 mt-5">
+            <button id="btn-decoller" onclick="cmd('decoller')" disabled
+                class="btn-ctrl btn-takeoff h-16 rounded-2xl text-lg gap-2 flex-row">
+                <i data-lucide="rocket" class="w-6 h-6"></i>
+                Décoller
+            </button>
+            <button id="btn-atterrir" onclick="cmd('atterrir')" disabled
+                class="btn-ctrl btn-land h-16 rounded-2xl text-lg gap-2 flex-row">
+                <i data-lucide="corner-down-left" class="w-6 h-6"></i>
+                Atterrir
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ── Aide clavier ── -->
+    <div class="mt-4 glass rounded-xl px-4 py-2 text-center text-slate-600 text-xs">
+        <span class="text-slate-500 font-medium">Clavier :</span>
+        ↑↓ avancer/reculer &nbsp;·&nbsp; ←→ tourner &nbsp;·&nbsp;
+        W/S monter/descendre &nbsp;·&nbsp; Espace décollage / atterrissage
+    </div>
+
+    <script>
+        // ─── État local ────────────────────────────────────
+        let etat = { connecte: false, en_vol: false, altitude_cm: 0 };
+        let enCours = false;
+
+        lucide.createIcons();
+
+        // ─── API ───────────────────────────────────────────
+        async function connecter() {
+            afficherMsg("Connexion Bluetooth...", "warn");
+            try {
+                const r = await fetch("/api/connecter", { method: "POST" });
+                const d = await r.json();
+                majInterface(d);
+                afficherMsg(d.message, d.ok ? "ok" : "err");
+            } catch {
+                afficherMsg("Serveur introuvable — lancez serveur_drone.py", "err");
+            }
+        }
+
+        async function cmd(action) {
+            if (enCours) return;
+            enCours = true;
+            afficherMsg(labels[action] + "...", "warn");
+            try {
+                const r = await fetch(`/api/${action}`, { method: "POST" });
+                const d = await r.json();
+                majInterface(d);
+                afficherMsg(d.message, d.ok ? "ok" : "err");
+            } catch {
+                afficherMsg("Erreur de communication", "err");
+            } finally {
+                enCours = false;
+            }
+        }
+
+        const labels = {
+            decoller: "Décollage", atterrir: "Atterrissage",
+            avancer: "Avancer 30 cm", reculer: "Reculer 30 cm",
+            tourner_gauche: "Tourner gauche 90°", tourner_droite: "Tourner droite 90°",
+            monter: "Monter 30 cm", descendre: "Descendre 30 cm"
+        };
+
+        // ─── Mise à jour UI ────────────────────────────────
+        function majInterface(d) {
+            etat = { connecte: d.connecte, en_vol: d.en_vol, altitude_cm: d.altitude_cm };
+
+            const fly = d.en_vol;
+            const conn = d.connecte;
+            const alt  = d.altitude_cm || 0;
+
+            // LED + texte connexion
+            const led = document.getElementById("led-conn");
+            const txt = document.getElementById("txt-conn");
+            const btnC = document.getElementById("btn-connect");
+            const lblC = document.getElementById("lbl-connect");
+
+            if (!conn) {
+                led.className = "led led-off";
+                txt.textContent = "Déconnecté";
+                lblC.textContent = "Connecter";
+                btnC.classList.remove("connected");
+            } else if (fly) {
+                led.className = "led led-yellow";
+                txt.textContent = "En vol";
+                lblC.textContent = "Connecté";
+                btnC.classList.add("connected");
+            } else {
+                led.className = "led led-green";
+                txt.textContent = "Connecté";
+                lblC.textContent = "Connecté";
+                btnC.classList.add("connected");
+            }
+
+            // Altitude
+            document.getElementById("alt-header").textContent = alt + " cm";
+            document.getElementById("alt-bar-txt").textContent = alt;
+            const pct = Math.min((alt / 200) * 100, 100);
+            document.getElementById("alt-bar-fill").style.height = pct + "%";
+
+            // Drone SVG
+            const props = ["prop-fl","prop-fr","prop-bl","prop-br"];
+            props.forEach(id => {
+                const el = document.getElementById(id);
+                if (fly) el.classList.add("spinning");
+                else     el.classList.remove("spinning");
+            });
+            document.getElementById("drone-led").setAttribute("fill", fly ? "#22c55e" : "#374151");
+            document.getElementById("drone-svg").style.filter =
+                fly ? "drop-shadow(0 0 10px rgba(59,130,246,0.8))" : "none";
+
+            // Boutons actifs/inactifs
+            activer("btn-decoller",       conn && !fly);
+            activer("btn-atterrir",       conn &&  fly);
+            activer("btn-avancer",        conn &&  fly);
+            activer("btn-reculer",        conn &&  fly);
+            activer("btn-tourner_gauche", conn &&  fly);
+            activer("btn-tourner_droite", conn &&  fly);
+            activer("btn-monter",         conn &&  fly);
+            activer("btn-descendre",      conn &&  fly);
+        }
+
+        function activer(id, ok) {
+            const el = document.getElementById(id);
+            if (el) el.disabled = !ok;
+        }
+
+        function afficherMsg(txt, type) {
+            const el = document.getElementById("msg");
+            el.className = "text-center text-sm font-medium mb-5 h-5 transition-colors " +
+                ({ ok: "msg-ok", err: "msg-err", warn: "msg-warn", info: "msg-info" }[type] || "msg-info");
+            el.textContent = txt;
+        }
+
+        // ─── Clavier ──────────────────────────────────────
+        document.addEventListener("keydown", e => {
+            if (e.repeat) return;
+            const map = {
+                ArrowUp:    "avancer",
+                ArrowDown:  "reculer",
+                ArrowLeft:  "tourner_gauche",
+                ArrowRight: "tourner_droite",
+                w: "monter", W: "monter",
+                s: "descendre", S: "descendre",
+                " ": etat.en_vol ? "atterrir" : "decoller"
+            };
+            const action = map[e.key];
+            if (action) { e.preventDefault(); cmd(action); }
+        });
+
+        // ─── Polling de l'état toutes les 3 s ─────────────
+        async function pollEtat() {
+            try {
+                const r = await fetch("/api/etat");
+                majInterface(await r.json());
+            } catch { /* serveur pas encore démarré */ }
+        }
+        setInterval(pollEtat, 3000);
+    </script>
+</body>
+</html>
