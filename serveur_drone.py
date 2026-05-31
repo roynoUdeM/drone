@@ -24,13 +24,13 @@ app = Flask(__name__)
 MAMBO_ADDR = "D0:3A:9F:EF:E6:22"
 
 PUISSANCE_TRANSLATION = 30     # % pour avancer / reculer
-DUREE_30CM            = 0.55   # secondes ≈ 30 cm
+DUREE_30CM            = 0.80   # secondes ≈ 30 cm
 
 PUISSANCE_VIRAGE      = 80     # % pour tourner
 DUREE_VIRAGE_90       = 0.65   # secondes ≈ 90°
 
 PUISSANCE_VERTICAL    = 50     # % pour monter / descendre
-DUREE_VERTICAL_30CM   = 0.45   # secondes ≈ 30 cm vertical
+DUREE_VERTICAL_30CM   = 0.65   # secondes ≈ 30 cm vertical
 # ═══════════════════════════════════════════════════════
 
 # ── UUIDs BLE du Parrot Mambo (protocole ARSDK) ──────
