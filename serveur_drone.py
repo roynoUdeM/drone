@@ -96,18 +96,31 @@ class MamboController:
         pass  # handshake requis, contenu ignoré
 
     async def _connecter_async(self):
-        from bleak import BleakClient
-        self.client = BleakClient(MAMBO_ADDR)
+        from bleak import BleakClient, BleakScanner
+
+        # Sur Windows, il faut scanner d'abord pour que le système
+        # "voie" l'appareil avant de pouvoir s'y connecter
+        print("Recherche du Mambo en Bluetooth...")
+        device = await BleakScanner.find_device_by_address(MAMBO_ADDR, timeout=10.0)
+        if device is None:
+            raise Exception(
+                f"Mambo introuvable ({MAMBO_ADDR}) — "
+                "vérifiez qu'il est allumé et que son LED clignote"
+            )
+        print(f"Mambo trouvé : {device.name} — connexion...")
+
+        self.client = BleakClient(device)
         await self.client.connect(timeout=15.0)
-        # Activer les notifications = handshake indispensable pour que le drone accepte les commandes
+
+        # Activer les notifications = handshake indispensable
         for uuid in NOTIFY_CHARS:
             try:
                 await self.client.start_notify(uuid, self._notification)
             except Exception:
-                pass   # certains firmwares n'ont pas toutes les caractéristiques
+                pass
         await asyncio.sleep(0.5)
-        # Démarrer le keep-alive : envoie un PCMD neutre toutes les 0.5 s
-        # pour éviter que le Mambo coupe la connexion BLE par inactivité
+
+        # Keep-alive : PCMD neutre toutes les 0.5 s pour maintenir la connexion
         asyncio.ensure_future(self._keep_alive())
 
     async def _keep_alive(self):
