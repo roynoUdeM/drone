@@ -184,9 +184,13 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <select id="select-drone" onchange="choisirDrone(this.value)"
+            <select id="select-drone" onchange="selectionnerDrone(this.value)"
                 class="bg-white border-2 border-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-sm cursor-pointer">
             </select>
+            <button onclick="ouvrirModal()" title="Ajouter un drone"
+                class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold w-9 h-9 rounded-xl text-base flex items-center justify-center shrink-0">➕</button>
+            <button onclick="supprimerDroneSelectionne()" title="Supprimer ce drone"
+                class="bg-red-100 hover:bg-red-200 text-red-600 font-bold w-9 h-9 rounded-xl text-base flex items-center justify-center shrink-0">🗑️</button>
             <button id="btn-connect" onclick="connecter()"
                 class="bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2">
                 <i data-lucide="bluetooth" class="w-4 h-4"></i>
@@ -307,6 +311,32 @@
 
     </div>
 
+    <!-- ══ MODAL : Ajouter un drone ═══════════════════════ -->
+    <div id="modal-drone" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-80 shadow-2xl">
+            <h3 class="font-black text-slate-800 text-lg mb-4">🚁 Ajouter un drone</h3>
+            <div class="space-y-3 mb-5">
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-1">Nom du drone</label>
+                    <input id="inp-nom" type="text" placeholder="ex: Mambo"
+                        class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-medium focus:border-violet-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-1">Adresse Bluetooth (MAC)</label>
+                    <input id="inp-adresse" type="text" placeholder="ex: D0:3A:9F:EF:E6:22"
+                        class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-mono text-sm focus:border-violet-400 outline-none">
+                    <p class="text-xs text-slate-400 mt-1">Format : XX:XX:XX:XX:XX:XX</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="fermerModal()"
+                    class="flex-1 py-2 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:bg-slate-50">Annuler</button>
+                <button onclick="sauvegarderDrone()"
+                    class="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold">Sauvegarder</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ─── Données ──────────────────────────────────────
         const BLOCS_INFO = {
@@ -325,36 +355,108 @@
 
         lucide.createIcons();
 
-        // ─── Chargement des drones disponibles ────────────
-        async function chargerDrones() {
-            try {
-                const r = await fetch("/api/drones");
-                const d = await r.json();
-                const sel = document.getElementById("select-drone");
-                sel.innerHTML = "";
-                d.drones.forEach((drone, i) => {
-                    const opt = document.createElement("option");
-                    opt.value = i;
-                    opt.textContent = "🚁 " + drone.nom;
-                    if (drone.adresse === d.actif.adresse) opt.selected = true;
-                    sel.appendChild(opt);
-                });
-            } catch {}
-        }
-        chargerDrones();
+        // ─── Gestion des drones (localStorage) ──────────────
 
-        async function choisirDrone(index) {
+        const DRONES_PAR_DEFAUT = [
+            { nom: "Mambo",        adresse: "D0:3A:9F:EF:E6:22" },
+            { nom: "Drone-caméra", adresse: "D0:3A:72:2B:E6:22" },
+        ];
+
+        function getDrones() {
             try {
-                const r = await fetch("/api/choisir_drone", {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({ index: parseInt(index) })
-                });
-                const d = await r.json();
-                if (d.ok) afficherMsg("Drone : " + d.actif.nom, "#6d28d9");
-                else afficherMsg(d.message, "#ef4444");
+                const stored = localStorage.getItem("drones");
+                if (stored) return JSON.parse(stored);
             } catch {}
+            return [...DRONES_PAR_DEFAUT];
         }
+
+        function saveDrones(drones) {
+            localStorage.setItem("drones", JSON.stringify(drones));
+        }
+
+        function getDroneActifIndex() {
+            return parseInt(localStorage.getItem("drone_actif_index") || "0");
+        }
+
+        function setDroneActifIndex(i) {
+            localStorage.setItem("drone_actif_index", String(i));
+        }
+
+        function chargerSelectDrone() {
+            const drones = getDrones();
+            const actif  = getDroneActifIndex();
+            const sel    = document.getElementById("select-drone");
+            sel.innerHTML = "";
+            if (drones.length === 0) {
+                const opt = document.createElement("option");
+                opt.textContent = "— Aucun drone —";
+                sel.appendChild(opt);
+                return;
+            }
+            drones.forEach((d, i) => {
+                const opt = document.createElement("option");
+                opt.value = i;
+                opt.textContent = "🚁 " + d.nom;
+                if (i === actif) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        function selectionnerDrone(index) {
+            setDroneActifIndex(parseInt(index));
+        }
+
+        function ouvrirModal() {
+            document.getElementById("inp-nom").value = "";
+            document.getElementById("inp-adresse").value = "";
+            document.getElementById("modal-drone").classList.remove("hidden");
+            setTimeout(() => document.getElementById("inp-nom").focus(), 50);
+        }
+
+        function fermerModal() {
+            document.getElementById("modal-drone").classList.add("hidden");
+        }
+
+        function sauvegarderDrone() {
+            const nom     = document.getElementById("inp-nom").value.trim();
+            const adresse = document.getElementById("inp-adresse").value.trim().toUpperCase();
+            if (!nom) { alert("Entrez un nom pour le drone."); return; }
+            if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(adresse)) {
+                alert("Adresse Bluetooth invalide.\nFormat attendu : XX:XX:XX:XX:XX:XX");
+                return;
+            }
+            const drones = getDrones();
+            drones.push({ nom, adresse });
+            saveDrones(drones);
+            setDroneActifIndex(drones.length - 1);
+            chargerSelectDrone();
+            fermerModal();
+            afficherMsg("Drone « " + nom + " » ajouté !", "#22c55e");
+        }
+
+        function supprimerDroneSelectionne() {
+            const drones = getDrones();
+            if (drones.length === 0) return;
+            const index = parseInt(document.getElementById("select-drone").value);
+            if (isNaN(index) || !drones[index]) return;
+            if (!confirm("Supprimer « " + drones[index].nom + " » ?")) return;
+            drones.splice(index, 1);
+            saveDrones(drones);
+            setDroneActifIndex(Math.max(0, index - 1));
+            chargerSelectDrone();
+            afficherMsg("Drone supprimé", "#94a3b8");
+        }
+
+        // Fermer le modal en cliquant hors de la boîte
+        document.getElementById("modal-drone").addEventListener("click", function(e) {
+            if (e.target === this) fermerModal();
+        });
+
+        // Initialiser localStorage au premier chargement
+        if (!localStorage.getItem("drones")) {
+            saveDrones([...DRONES_PAR_DEFAUT]);
+        }
+        chargerSelectDrone();
 
         // ─── Programme ────────────────────────────────────
 
@@ -433,9 +535,20 @@
         // ─── Connexion ────────────────────────────────────
 
         async function connecter() {
-            afficherMsg("Connexion...", "#f97316");
+            const drones = getDrones();
+            const index  = getDroneActifIndex();
+            const drone  = drones[index];
+            if (!drone) {
+                afficherMsg("Aucun drone sélectionné !", "#ef4444");
+                return;
+            }
+            afficherMsg("Connexion à " + drone.nom + "...", "#f97316");
             try {
-                const r = await fetch("/api/connecter", { method:"POST" });
+                const r = await fetch("/api/connecter", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ nom: drone.nom, adresse: drone.adresse })
+                });
                 const d = await r.json();
                 majStatut(d);
                 afficherMsg(d.message, d.ok ? "#22c55e" : "#ef4444");
