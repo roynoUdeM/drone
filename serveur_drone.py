@@ -49,11 +49,14 @@ NOTIFY_CHARS = [
 
 # ── IDs de commandes ARSDK Minidrone ─────────────────
 # Source : pyparrot/commandsandsensors/minidrone.xml
-_PROJECT  = 2   # minidrone
-_PILOTING = 0   # classe Piloting
-_TAKEOFF  = 1
-_PCMD     = 2
-_LAND     = 3
+_PROJECT      = 2   # minidrone
+_PILOTING     = 0   # classe Piloting
+_TAKEOFF      = 1
+_PCMD         = 2
+_LAND         = 3
+
+_MEDIA_RECORD = 6   # classe MediaRecord
+_TAKE_PICTURE = 0   # commande Picture
 
 _seq = {"ack": 0, "noack": 0}
 
@@ -61,8 +64,14 @@ _seq = {"ack": 0, "noack": 0}
 def _paquet_ack(cmd_id):
     """Paquet pour commandes avec accusé de réception (décollage, atterrissage)."""
     _seq["ack"] = (_seq["ack"] + 1) % 256
-    # format : data_type=4, seq, project, class, cmd
     return struct.pack("<BBBBH", 4, _seq["ack"], _PROJECT, _PILOTING, cmd_id)
+
+
+def _paquet_photo():
+    """Paquet pour déclencher la prise de photo (caméra verticale)."""
+    _seq["ack"] = (_seq["ack"] + 1) % 256
+    # data_type=4, seq, project=2, class=6 (MediaRecord), cmd=0 (Picture), mass_storage_id=0
+    return struct.pack("<BBBBHb", 4, _seq["ack"], _PROJECT, _MEDIA_RECORD, _TAKE_PICTURE, 0)
 
 
 def _paquet_pcmd(roll, pitch, yaw, vertical):
@@ -166,6 +175,10 @@ class MamboController:
                        timeout=duree + 5)
         time.sleep(0.3)
 
+    def prendre_photo(self):
+        self._executer(self._cmd_ack_async(_paquet_photo()))
+        time.sleep(0.5)
+
     @property
     def connecte(self):
         return self.client is not None and self.client.is_connected
@@ -211,6 +224,9 @@ def _descendre():
     mambo.fly_direct(0, 0, 0, -PUISSANCE_VERTICAL, DUREE_VERTICAL_30CM)
     etat["altitude_cm"] = max(etat["altitude_cm"] - 30, 20)
 
+def _prendre_photo():
+    mambo.prendre_photo()
+
 
 ACTIONS = {
     "decoller":       _decoller,
@@ -221,6 +237,7 @@ ACTIONS = {
     "tourner_droite": _tourner_droite,
     "monter":         _monter,
     "descendre":      _descendre,
+    "photo":          _prendre_photo,
 }
 
 LABELS = {
@@ -232,6 +249,7 @@ LABELS = {
     "tourner_droite": "Tourner droite 90°",
     "monter":         "Monter 30 cm",
     "descendre":      "Descendre 30 cm",
+    "photo":          "Prendre une photo",
 }
 
 

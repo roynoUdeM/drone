@@ -247,6 +247,11 @@
                 onclick="ajouterBloc('atterrir')">
                 <span class="emoji">🏁</span> Atterrir
             </button>
+
+            <button class="bloc" style="background:#7c3aed; box-shadow:0 5px 0 #4c1d95"
+                onclick="ajouterBloc('photo')">
+                <span class="emoji">📷</span> Prendre une photo
+            </button>
         </div>
 
         <!-- ── COLONNE 2 : Programme ── -->
@@ -305,6 +310,7 @@
                     <div>☁️ = Monter</div>
                     <div>🌊 = Descendre</div>
                     <div>🏁 = Atterrir</div>
+                    <div>📷 = Photo</div>
                 </div>
             </div>
         </div>
@@ -348,6 +354,7 @@
             monter:         { emoji:"☁️", label:"Monter 30cm",      couleur:"#06b6d4", ombre:"#0e7490" },
             descendre:      { emoji:"🌊", label:"Descendre 30cm",   couleur:"#0891b2", ombre:"#155e75" },
             atterrir:       { emoji:"🏁", label:"Atterrir",          couleur:"#dc2626", ombre:"#7f1d1d" },
+            photo:          { emoji:"📷", label:"Prendre une photo", couleur:"#7c3aed", ombre:"#4c1d95" },
         };
 
         let programme    = [];   // liste des actions
