@@ -183,11 +183,16 @@
                 </div>
             </div>
         </div>
-        <button id="btn-connect" onclick="connecter()"
-            class="bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2">
-            <i data-lucide="bluetooth" class="w-4 h-4"></i>
-            <span id="lbl-connect">Connecter</span>
-        </button>
+        <div class="flex items-center gap-2">
+            <select id="select-drone" onchange="choisirDrone(this.value)"
+                class="bg-white border-2 border-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-sm cursor-pointer">
+            </select>
+            <button id="btn-connect" onclick="connecter()"
+                class="bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2">
+                <i data-lucide="bluetooth" class="w-4 h-4"></i>
+                <span id="lbl-connect">Connecter</span>
+            </button>
+        </div>
     </div>
 
     <!-- ══ CORPS PRINCIPAL ══════════════════════════════ -->
@@ -319,6 +324,37 @@
         let enExecution  = false;
 
         lucide.createIcons();
+
+        // ─── Chargement des drones disponibles ────────────
+        async function chargerDrones() {
+            try {
+                const r = await fetch("/api/drones");
+                const d = await r.json();
+                const sel = document.getElementById("select-drone");
+                sel.innerHTML = "";
+                d.drones.forEach((drone, i) => {
+                    const opt = document.createElement("option");
+                    opt.value = i;
+                    opt.textContent = "🚁 " + drone.nom;
+                    if (drone.adresse === d.actif.adresse) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            } catch {}
+        }
+        chargerDrones();
+
+        async function choisirDrone(index) {
+            try {
+                const r = await fetch("/api/choisir_drone", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ index: parseInt(index) })
+                });
+                const d = await r.json();
+                if (d.ok) afficherMsg("Drone : " + d.actif.nom, "#6d28d9");
+                else afficherMsg(d.message, "#ef4444");
+            } catch {}
+        }
 
         // ─── Programme ────────────────────────────────────
 
@@ -489,7 +525,8 @@
 
             if (d.connecte) {
                 led.className = "led led-vert";
-                txt.textContent = "Mambo connecté !";
+                const nom = d.drone_actif ? d.drone_actif.nom : "Drone";
+                txt.textContent = nom + " connecté !";
                 lbl.textContent = "Connecté ✓";
                 btnC.style.background = "#16a34a";
                 btnC.style.boxShadow  = "0 4px 0 #14532d";

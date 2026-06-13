@@ -21,7 +21,12 @@ app = Flask(__name__)
 # ═══════════════════════════════════════════════════════
 #  CONFIGURATION
 # ═══════════════════════════════════════════════════════
-MAMBO_ADDR = "D0:3A:9F:EF:E6:22"
+
+# Liste des drones disponibles  { "nom": "...", "adresse": "..." }
+DRONES = [
+    {"nom": "Mambo",        "adresse": "D0:3A:9F:EF:E6:22"},
+    {"nom": "Drone-caméra", "adresse": "D0:3A:72:2B:E6:22"},
+]
 
 PUISSANCE_TRANSLATION = 30     # % pour avancer / reculer
 DUREE_30CM            = 0.80   # secondes ≈ 30 cm
@@ -32,6 +37,8 @@ DUREE_VIRAGE_90       = 0.93   # secondes ≈ 90°
 PUISSANCE_VERTICAL    = 50     # % pour monter / descendre
 DUREE_VERTICAL_30CM   = 0.65   # secondes ≈ 30 cm vertical
 # ═══════════════════════════════════════════════════════
+
+drone_actif = DRONES[0]  # drone sélectionné par défaut
 
 # ── UUIDs BLE du Parrot Mambo (protocole ARSDK) ──────
 # Source : pyparrot/networking/bleConnection.py
@@ -100,14 +107,16 @@ class MamboController:
 
         # Sur Windows, il faut scanner d'abord pour que le système
         # "voie" l'appareil avant de pouvoir s'y connecter
-        print("Recherche du Mambo en Bluetooth...")
-        device = await BleakScanner.find_device_by_address(MAMBO_ADDR, timeout=10.0)
+        addr = drone_actif["adresse"]
+        nom  = drone_actif["nom"]
+        print(f"Recherche de {nom} ({addr}) en Bluetooth...")
+        device = await BleakScanner.find_device_by_address(addr, timeout=10.0)
         if device is None:
             raise Exception(
-                f"Mambo introuvable ({MAMBO_ADDR}) — "
+                f"{nom} introuvable ({addr}) — "
                 "vérifiez qu'il est allumé et que son LED clignote"
             )
-        print(f"Mambo trouvé : {device.name} — connexion...")
+        print(f"{nom} trouvé — connexion...")
 
         self.client = BleakClient(device)
         await self.client.connect(timeout=15.0)
@@ -255,9 +264,24 @@ def index():
         os.path.dirname(os.path.abspath(__file__)),
         "interface_blocs.html")
 
+@app.route("/api/drones")
+def api_drones():
+    return jsonify({"drones": DRONES, "actif": drone_actif})
+
+@app.route("/api/choisir_drone", methods=["POST"])
+def api_choisir_drone():
+    global drone_actif
+    if etat["connecte"]:
+        return jsonify({"ok": False, "message": "Déconnectez d'abord le drone actuel"})
+    index = request.get_json(force=True).get("index", 0)
+    if 0 <= index < len(DRONES):
+        drone_actif = DRONES[index]
+        return jsonify({"ok": True, "message": f"{drone_actif['nom']} sélectionné", "actif": drone_actif})
+    return jsonify({"ok": False, "message": "Drone introuvable"})
+
 @app.route("/api/etat")
 def api_etat():
-    return jsonify({**etat, "programme": prog})
+    return jsonify({**etat, "programme": prog, "drone_actif": drone_actif})
 
 @app.route("/api/connecter", methods=["POST"])
 def api_connecter():
