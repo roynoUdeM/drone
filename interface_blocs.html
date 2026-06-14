@@ -171,6 +171,15 @@
 </head>
 <body class="p-3 md:p-5">
 
+    <!-- ══ BOUTON URGENCE ═══════════════════════════════ -->
+    <div class="flex justify-end mb-2">
+        <button onclick="urgence()"
+            class="bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black px-5 py-2 rounded-2xl text-sm flex items-center gap-2 shadow-lg"
+            style="box-shadow:0 5px 0 #7f1d1d">
+            🆘 ATTERRISSAGE D'URGENCE
+        </button>
+    </div>
+
     <!-- ══ TITRE ════════════════════════════════════════ -->
     <div class="flex items-center justify-between mb-4 bg-white/70 backdrop-blur rounded-2xl px-4 py-3 shadow-sm">
         <div class="flex items-center gap-3">
@@ -561,6 +570,24 @@
                 afficherMsg(d.message, d.ok ? "#22c55e" : "#ef4444");
             } catch {
                 afficherMsg("Serveur introuvable !", "#ef4444");
+            }
+        }
+
+        // ─── Urgence ──────────────────────────────────────
+
+        async function urgence() {
+            enExecution = false;
+            afficherMsg("🆘 Urgence ! Atterrissage...", "#dc2626");
+            try {
+                const r = await fetch("/api/urgence", { method: "POST" });
+                const d = await r.json();
+                majStatut(d);
+                afficherMsg(d.message, d.ok ? "#f97316" : "#dc2626");
+                rafraichirProgramme();
+                document.getElementById("zone-progression").classList.add("hidden");
+                document.getElementById("barre-prog").style.width = "0%";
+            } catch {
+                afficherMsg("Serveur injoignable — éteignez le drone !", "#dc2626");
             }
         }
 

@@ -89,8 +89,9 @@ class MamboController:
     """Gère la connexion BLE et l'envoi de commandes dans un thread asyncio dédié."""
 
     def __init__(self):
-        self.client = None
-        self._loop  = asyncio.new_event_loop()
+        self.client    = None
+        self._loop     = asyncio.new_event_loop()
+        self._moving   = False   # True pendant fly_direct → keep_alive se tait
         threading.Thread(target=self._boucle_asyncio, daemon=True).start()
 
     def _boucle_asyncio(self):
@@ -137,8 +138,9 @@ class MamboController:
     async def _keep_alive(self):
         while self.client and self.client.is_connected:
             try:
-                pkt = bytearray(_paquet_pcmd(0, 0, 0, 0))
-                await self.client.write_gatt_char(CHAR_SEND_NO_ACK, pkt, response=False)
+                if not self._moving:   # ne pas interrompre un mouvement en cours
+                    pkt = bytearray(_paquet_pcmd(0, 0, 0, 0))
+                    await self.client.write_gatt_char(CHAR_SEND_NO_ACK, pkt, response=False)
             except Exception:
                 break
             await asyncio.sleep(0.5)
@@ -148,14 +150,18 @@ class MamboController:
             CHAR_SEND_WITH_ACK, bytearray(paquet), response=False)
 
     async def _fly_async(self, roll, pitch, yaw, vertical, duree):
-        fin = time.time() + duree
-        while time.time() < fin:
-            pkt = bytearray(_paquet_pcmd(roll, pitch, yaw, vertical))
-            await self.client.write_gatt_char(CHAR_SEND_NO_ACK, pkt, response=False)
-            await asyncio.sleep(0.05)
-        # Arrêt propre
-        stop = bytearray(_paquet_pcmd(0, 0, 0, 0))
-        await self.client.write_gatt_char(CHAR_SEND_NO_ACK, stop, response=False)
+        self._moving = True
+        try:
+            fin = time.time() + duree
+            while time.time() < fin:
+                pkt = bytearray(_paquet_pcmd(roll, pitch, yaw, vertical))
+                await self.client.write_gatt_char(CHAR_SEND_NO_ACK, pkt, response=False)
+                await asyncio.sleep(0.05)
+            # Arrêt propre
+            stop = bytearray(_paquet_pcmd(0, 0, 0, 0))
+            await self.client.write_gatt_char(CHAR_SEND_NO_ACK, stop, response=False)
+        finally:
+            self._moving = False
 
     # ── Interface publique (appelée depuis Flask / threads) ──
 
@@ -300,6 +306,18 @@ def api_connecter():
         elif "timeout" in msg.lower():
             msg = "Délai dépassé — drone trop loin ?"
         return jsonify({"ok": False, "message": msg, **etat})
+
+@app.route("/api/urgence", methods=["POST"])
+def api_urgence():
+    """Atterrissage forcé immédiat — interrompt tout programme en cours."""
+    prog.update(en_cours=False, succes=False, etape=-1, message="Atterrissage d'urgence !")
+    try:
+        mambo.atterrir()
+        etat["en_vol"]      = False
+        etat["altitude_cm"] = 0
+        return jsonify({"ok": True, "message": "Atterrissage d'urgence effectué", **etat})
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Urgence échouée : {e}", **etat})
 
 @app.route("/api/programme", methods=["POST"])
 def api_programme():
