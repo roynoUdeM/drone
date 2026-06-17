@@ -192,11 +192,15 @@
                 </div>
             </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+            <button id="btn-scan" onclick="scannerDrones()" title="Détecter les drones à proximité"
+                class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold px-3 py-2 rounded-xl text-sm flex items-center gap-1 shrink-0">
+                <span id="icone-scan">🔍</span> <span id="lbl-scan">Scanner</span>
+            </button>
             <select id="select-drone" onchange="selectionnerDrone(this.value)"
                 class="bg-white border-2 border-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-sm cursor-pointer">
             </select>
-            <button onclick="ouvrirModal()" title="Ajouter un drone"
+            <button onclick="ouvrirModal()" title="Ajouter un drone manuellement"
                 class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold w-9 h-9 rounded-xl text-base flex items-center justify-center shrink-0">➕</button>
             <button onclick="supprimerDroneSelectionne()" title="Supprimer ce drone"
                 class="bg-red-100 hover:bg-red-200 text-red-600 font-bold w-9 h-9 rounded-xl text-base flex items-center justify-center shrink-0">🗑️</button>
@@ -467,6 +471,55 @@
         document.getElementById("modal-drone").addEventListener("click", function(e) {
             if (e.target === this) fermerModal();
         });
+
+        async function scannerDrones() {
+            const btnScan  = document.getElementById("btn-scan");
+            const icone    = document.getElementById("icone-scan");
+            const lblScan  = document.getElementById("lbl-scan");
+            btnScan.disabled = true;
+            icone.textContent = "⏳";
+            lblScan.textContent = "Scan...";
+            afficherMsg("Scan Bluetooth en cours (5 s)...", "#6d28d9");
+            try {
+                const r = await fetch("/api/scanner", { method: "POST" });
+                const d = await r.json();
+                if (!d.ok) {
+                    afficherMsg("Scan échoué : " + d.message, "#ef4444");
+                    return;
+                }
+                if (d.drones.length === 0) {
+                    afficherMsg("Aucun drone Parrot détecté — vérifiez qu'il est allumé et clignote.", "#f97316");
+                    return;
+                }
+                // Ajouter les drones trouvés s'ils ne sont pas déjà dans la liste
+                const liste = getDrones();
+                let ajouts = 0;
+                let dernierIndex = getDroneActifIndex();
+                d.drones.forEach(trouvé => {
+                    const existe = liste.findIndex(x => x.adresse === trouvé.adresse);
+                    if (existe === -1) {
+                        liste.push(trouvé);
+                        dernierIndex = liste.length - 1;
+                        ajouts++;
+                    } else {
+                        dernierIndex = existe;
+                    }
+                });
+                saveDrones(liste);
+                setDroneActifIndex(dernierIndex);
+                chargerSelectDrone();
+                const msg = d.drones.length === 1
+                    ? `✅ ${d.drones[0].nom} détecté !${ajouts ? " Ajouté à la liste." : ""} Cliquez Connecter.`
+                    : `✅ ${d.drones.length} drones détectés !${ajouts ? ` (${ajouts} nouveaux)` : ""} Sélectionnez puis Connecter.`;
+                afficherMsg(msg, "#22c55e");
+            } catch {
+                afficherMsg("Erreur de scan — serveur introuvable ?", "#ef4444");
+            } finally {
+                btnScan.disabled = false;
+                icone.textContent = "🔍";
+                lblScan.textContent = "Scanner";
+            }
+        }
 
         // Initialiser localStorage au premier chargement
         if (!localStorage.getItem("drones")) {

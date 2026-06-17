@@ -285,6 +285,24 @@ def index():
 def api_etat():
     return jsonify({**etat, "programme": prog, "drone_actif": drone_actif})
 
+@app.route("/api/scanner", methods=["POST"])
+def api_scanner():
+    """Scanne le Bluetooth et retourne les drones Parrot détectés à proximité."""
+    async def _scan():
+        from bleak import BleakScanner
+        devices = await BleakScanner.discover(timeout=5.0)
+        drones = []
+        for d in devices:
+            nom = (d.name or "").strip()
+            if any(k in nom.upper() for k in ["MAMBO", "PARROT", "SWING", "ROLLING", "BEBOP", "ANAFI"]):
+                drones.append({"nom": nom, "adresse": d.address})
+        return drones
+    try:
+        drones = asyncio.run_coroutine_threadsafe(_scan(), mambo._loop).result(timeout=15)
+        return jsonify({"ok": True, "drones": drones})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e), "drones": []})
+
 @app.route("/api/connecter", methods=["POST"])
 def api_connecter():
     global drone_actif
