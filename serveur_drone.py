@@ -108,21 +108,22 @@ class MamboController:
     async def _connecter_async(self):
         from bleak import BleakClient, BleakScanner
 
-        # Sur Windows, il faut scanner d'abord pour que le système
-        # "voie" l'appareil avant de pouvoir s'y connecter
         addr = drone_actif["adresse"]
         nom  = drone_actif["nom"]
-        print(f"Recherche de {nom} ({addr}) en Bluetooth...")
-        device = await BleakScanner.find_device_by_address(addr, timeout=10.0)
+        print(f"[1/3] Recherche de {nom} ({addr}) en Bluetooth...")
+        etat["statut"] = "Recherche du drone..."
+        device = await BleakScanner.find_device_by_address(addr, timeout=8.0)
         if device is None:
             raise Exception(
-                f"{nom} introuvable ({addr}) — "
-                "vérifiez qu'il est allumé et que son LED clignote"
+                f"{nom} introuvable — "
+                "vérifiez qu'il est allumé et que son LED clignote en vert"
             )
-        print(f"{nom} trouvé — connexion...")
+        print(f"[2/3] {nom} trouvé — connexion BLE...")
+        etat["statut"] = "Connexion BLE..."
 
         self.client = BleakClient(device)
-        await self.client.connect(timeout=15.0)
+        await self.client.connect(timeout=12.0)
+        print(f"[3/3] Connecté — handshake...")
 
         # Activer les notifications = handshake indispensable
         for uuid in NOTIFY_CHARS:
@@ -166,7 +167,7 @@ class MamboController:
     # ── Interface publique (appelée depuis Flask / threads) ──
 
     def connecter(self):
-        self._executer(self._connecter_async(), timeout=20)
+        self._executer(self._connecter_async(), timeout=30)
 
     def decoller(self):
         self._executer(self._cmd_ack_async(_paquet_ack(_TAKEOFF)))
@@ -193,7 +194,7 @@ class MamboController:
 # ── Singleton ─────────────────────────────────────────
 mambo = MamboController()
 
-etat = {"connecte": False, "en_vol": False, "altitude_cm": 0}
+etat = {"connecte": False, "en_vol": False, "altitude_cm": 0, "statut": ""}
 prog = {"en_cours": False, "etape": -1, "total": 0,
         "message": "", "succes": None}
 

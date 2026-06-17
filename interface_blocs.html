@@ -604,14 +604,34 @@
         // ─── Connexion ────────────────────────────────────
 
         async function connecter() {
-            const drones = getDrones();
-            const index  = getDroneActifIndex();
-            const drone  = drones[index];
-            if (!drone) {
-                afficherMsg("Aucun drone sélectionné !", "#ef4444");
+            // Lire depuis le menu déroulant (plus fiable que localStorage seul)
+            const sel   = document.getElementById("select-drone");
+            const index = parseInt(sel.value);
+            const drone = getDrones()[index];
+            if (!drone || !drone.adresse) {
+                afficherMsg("Aucun drone sélectionné ! Utilisez 🔍 Scanner ou ➕ pour en ajouter un.", "#ef4444");
                 return;
             }
-            afficherMsg("Connexion à " + drone.nom + "...", "#f97316");
+
+            // Désactiver le bouton pendant la connexion
+            const btnC = document.getElementById("btn-connect");
+            btnC.disabled = true;
+            document.getElementById("lbl-connect").textContent = "Connexion...";
+
+            // Démarrer un polling visuel pendant qu'on attend la réponse serveur
+            afficherMsg(`🔍 Recherche de ${drone.nom}... (~15 sec)`, "#6d28d9");
+            const msgs = [
+                `🔍 Recherche de ${drone.nom}...`,
+                `📡 Drone trouvé — connexion BLE...`,
+                `🤝 Handshake en cours...`,
+                `⏳ Presque prêt...`,
+            ];
+            let mi = 0;
+            const timer = setInterval(() => {
+                mi = Math.min(mi + 1, msgs.length - 1);
+                afficherMsg(msgs[mi], "#6d28d9");
+            }, 4000);
+
             try {
                 const r = await fetch("/api/connecter", {
                     method: "POST",
@@ -622,7 +642,11 @@
                 majStatut(d);
                 afficherMsg(d.message, d.ok ? "#22c55e" : "#ef4444");
             } catch {
-                afficherMsg("Serveur introuvable !", "#ef4444");
+                afficherMsg("Serveur introuvable — relancez lancer.bat", "#ef4444");
+            } finally {
+                clearInterval(timer);
+                btnC.disabled = false;
+                document.getElementById("lbl-connect").textContent = "Connecter";
             }
         }
 
