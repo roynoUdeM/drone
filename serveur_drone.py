@@ -194,7 +194,7 @@ class MamboController:
     def fly_direct(self, roll, pitch, yaw, vertical, duree):
         self._executer(self._fly_async(roll, pitch, yaw, vertical, duree),
                        timeout=duree + 5)
-        time.sleep(1.2)  # pause pour laisser le drone se stabiliser avant la prochaine action
+        time.sleep(0.3)
 
     def prendre_photo(self):
         self._executer(self._cmd_ack_async(_paquet_photo()))
