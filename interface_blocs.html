@@ -751,15 +751,16 @@
                 led.className = "led led-vert";
                 const nom = d.drone_actif ? d.drone_actif.nom : "Drone";
                 txt.textContent = nom + " connecté !";
-                lbl.textContent = "Connecté ✓";
-                btnC.style.background = "#16a34a";
-                btnC.style.boxShadow  = "0 4px 0 #14532d";
+                lbl.textContent = "🔄 Reconnecter";
+                btnC.style.background = "#d97706";
+                btnC.style.boxShadow  = "0 4px 0 #92400e";
             } else {
                 led.className = "led led-off";
                 txt.textContent = "Non connecté";
                 lbl.textContent = "Connecter";
                 btnC.style.background = "";
                 btnC.style.boxShadow  = "";
+                btnC.className = "bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2";
             }
         }
 

@@ -169,6 +169,20 @@ class MamboController:
     def connecter(self):
         self._executer(self._connecter_async(), timeout=30)
 
+    def deconnecter(self):
+        try:
+            async def _disc():
+                if self.client:
+                    try:
+                        await self.client.disconnect()
+                    except Exception:
+                        pass
+                    self.client = None
+            self._executer(_disc(), timeout=8)
+        except Exception:
+            pass
+        self.client = None
+
     def decoller(self):
         self._executer(self._cmd_ack_async(_paquet_ack(_TAKEOFF)))
         time.sleep(2.5)
@@ -307,23 +321,29 @@ def api_scanner():
 @app.route("/api/connecter", methods=["POST"])
 def api_connecter():
     global drone_actif
-    if etat["connecte"]:
-        return jsonify({"ok": True, "message": "Déjà connecté", **etat})
     data = request.get_json(force=True) or {}
     drone_actif["nom"]     = data.get("nom", "Drone")
     drone_actif["adresse"] = data.get("adresse", "")
     if not drone_actif["adresse"]:
         return jsonify({"ok": False, "message": "Adresse Bluetooth manquante", **etat})
+
+    # Déconnecter proprement si une connexion précédente existe
+    if etat["connecte"] or mambo.client is not None:
+        mambo.deconnecter()
+        etat["connecte"] = False
+        etat["en_vol"]   = False
+
     try:
         mambo.connecter()
         etat["connecte"] = True
         return jsonify({"ok": True, "message": f"{drone_actif['nom']} connecté !", **etat, "drone_actif": drone_actif})
     except Exception as e:
+        etat["connecte"] = False
         msg = str(e)
-        if "not found" in msg.lower() or "unreachable" in msg.lower():
-            msg = f"{drone_actif['nom']} introuvable — vérifiez qu'il est allumé"
+        if "not found" in msg.lower() or "unreachable" in msg.lower() or "introuvable" in msg.lower():
+            msg = f"{drone_actif['nom']} introuvable — allumez le drone et attendez que la LED clignote"
         elif "timeout" in msg.lower():
-            msg = "Délai dépassé — drone trop loin ?"
+            msg = "Délai dépassé — drone trop loin ou pile trop faible ?"
         return jsonify({"ok": False, "message": msg, **etat})
 
 @app.route("/api/urgence", methods=["POST"])
